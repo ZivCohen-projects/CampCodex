@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Fierce Conversation Coach</title>
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="styles.css?v=20260620-depth-start-2" />
   </head>
   <body>
     <canvas id="backgroundScene" aria-hidden="true"></canvas>
@@ -53,8 +53,8 @@
 
         <section class="question-stage" aria-live="polite">
           <div class="stage-topline">
-            <span id="categoryLabel">The issue</span>
-            <button id="restartButton" class="icon-button" type="button" title="Start over" aria-label="Start over">
+            <span id="categoryLabel">Prep depth</span>
+            <button id="restartButton" class="icon-button" type="button" title="Start over" aria-label="Start over" hidden>
               Reset
             </button>
           </div>
@@ -89,7 +89,7 @@
             </div>
           </section>
 
-          <div id="questionCard" class="question-card">
+          <div id="questionCard" class="question-card" hidden>
             <div class="prompt-row">
               <p id="promptKicker" class="prompt-kicker">Start here</p>
             </div>
@@ -136,7 +136,7 @@
       </section>
     </main>
 
-    <script src="config.js"></script>
-    <script src="script.js"></script>
+    <script src="config.js?v=20260620-depth-start-2"></script>
+    <script src="script.js?v=20260620-depth-start-2"></script>
   </body>
 </html>

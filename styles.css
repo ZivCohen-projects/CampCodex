@@ -7,6 +7,8 @@
   --teal-dark: #176a62;
   --coral: #e76f51;
   --gold: #f2c14e;
+  --tan-border: #b08a5f;
+  --tan-fill: #fff8ec;
   --sage: #dce9dc;
   --rose: #fae2dc;
   --shadow: 0 22px 70px rgba(24, 32, 29, 0.16);
@@ -256,22 +258,25 @@ h1 {
 .depth-options {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  gap: 14px;
 }
 
 .depth-card {
-  min-height: 154px;
-  padding: 18px;
+  min-height: 168px;
+  padding: 20px;
   display: grid;
   align-content: start;
   gap: 8px;
   color: var(--ink);
   text-align: left;
-  border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.72);
+  border: 2px solid var(--tan-border);
+  border-radius: 8px;
+  background: rgba(255, 248, 236, 0.88);
   cursor: pointer;
+  box-shadow: 0 10px 24px rgba(92, 67, 40, 0.08);
   transition:
     transform 160ms ease,
+    box-shadow 160ms ease,
     border-color 160ms ease,
     background 160ms ease;
 }
@@ -279,8 +284,9 @@ h1 {
 .depth-card:hover,
 .depth-card:focus-visible {
   transform: translateY(-2px);
-  border-color: rgba(24, 32, 29, 0.36);
-  background: linear-gradient(135deg, rgba(42, 157, 143, 0.13), rgba(242, 193, 78, 0.18));
+  border-color: #8f6840;
+  background: #fff2dd;
+  box-shadow: 0 16px 34px rgba(92, 67, 40, 0.16);
 }
 
 .depth-card strong {
