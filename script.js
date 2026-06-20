@@ -215,9 +215,13 @@ const questions = [
 const state = {
   index: 0,
   answers: {},
+  adaptedQuestions: {},
+  pendingAdaptations: {},
 };
 
 const apiEndpoint = getApiEndpoint();
+const adaptiveEndpoint = getAdaptiveEndpoint();
+const adaptiveQuestionIds = new Set(["emotion", "personStyle", "request", "opening", "curiosity", "success"]);
 
 const els = {
   stepLabel: document.querySelector("#stepLabel"),
@@ -250,7 +254,7 @@ const els = {
 };
 
 function render() {
-  const question = questions[state.index];
+  const question = getCurrentQuestion();
   const completed = Object.keys(state.answers).length;
   const percent = Math.round((completed / questions.length) * 100);
 
@@ -276,6 +280,7 @@ function render() {
   if (question.type === "multi") renderMulti(question);
 
   updateNextState();
+  requestAdaptiveQuestion();
 }
 
 function hideInputs() {
@@ -350,14 +355,14 @@ function renderMulti(question) {
 }
 
 function updateNextState() {
-  const question = questions[state.index];
+  const question = getCurrentQuestion();
   const answer = state.answers[question.id];
   const hasAnswer = Array.isArray(answer) ? answer.length > 0 : Boolean(String(answer || "").trim());
   els.nextButton.disabled = !hasAnswer;
 }
 
 function commitTextAnswer() {
-  const question = questions[state.index];
+  const question = getCurrentQuestion();
   if (question.type === "text") {
     state.answers[question.id] = els.textAnswer.value.trim();
   }
@@ -387,12 +392,15 @@ function back() {
 function restart() {
   state.index = 0;
   state.answers = {};
+  state.adaptedQuestions = {};
+  state.pendingAdaptations = {};
   render();
 }
 
 function renderTrail() {
   els.answerTrail.innerHTML = "";
-  questions.forEach((question, index) => {
+  questions.forEach((baseQuestion, index) => {
+    const question = getQuestionAt(index);
     const answer = state.answers[question.id];
     if (!answer) return;
 
@@ -405,7 +413,8 @@ function renderTrail() {
 
 function renderScores() {
   const scores = { truth: 0, care: 0, clarity: 0 };
-  questions.forEach((question) => {
+  questions.forEach((baseQuestion, index) => {
+    const question = getQuestionAt(index);
     if (!state.answers[question.id]) return;
     Object.entries(question.scores || {}).forEach(([key, value]) => {
       scores[key] += value;
@@ -530,8 +539,8 @@ async function requestAiFeedback(plan) {
     const payload = {
       answers: questions.map((question) => ({
         id: question.id,
-        category: question.category,
-        question: question.question,
+        category: getQuestionById(question.id).category,
+        question: getQuestionById(question.id).question,
         answer: state.answers[question.id],
       })),
       plan,
@@ -551,7 +560,7 @@ async function requestAiFeedback(plan) {
     renderAiFeedback(data.feedback);
   } catch (error) {
     els.aiFeedbackContent.classList.add("is-error");
-    els.aiFeedbackContent.innerHTML = `<p>${escapeHtml(error.message)} The questionnaire still works, but live AI coaching needs a deployed backend with OPENAI_API_KEY set.</p>`;
+    els.aiFeedbackContent.innerHTML = `<p>${escapeHtml(error.message)} The questionnaire still works, but live AI coaching needs a deployed backend with a provider API key set.</p>`;
   }
 }
 
@@ -580,6 +589,105 @@ function escapeHtml(value) {
   });
 }
 
+function getCurrentQuestion() {
+  return getQuestionAt(state.index);
+}
+
+function getQuestionAt(index) {
+  const baseQuestion = questions[index];
+  return state.adaptedQuestions[baseQuestion.id] || baseQuestion;
+}
+
+function getQuestionById(id) {
+  const index = questions.findIndex((question) => question.id === id);
+  return index === -1 ? questions[0] : getQuestionAt(index);
+}
+
+async function requestAdaptiveQuestion() {
+  const baseQuestion = questions[state.index];
+  if (!shouldAdaptQuestion(baseQuestion)) return;
+  if (!adaptiveEndpoint) return;
+  if (state.answers[baseQuestion.id]) return;
+  if (state.adaptedQuestions[baseQuestion.id] || state.pendingAdaptations[baseQuestion.id]) return;
+
+  state.pendingAdaptations[baseQuestion.id] = true;
+
+  try {
+    const payload = {
+      baseQuestion,
+      answers: questions
+        .slice(0, state.index)
+        .map((question, index) => {
+          const renderedQuestion = getQuestionAt(index);
+          return {
+            id: renderedQuestion.id,
+            category: renderedQuestion.category,
+            question: renderedQuestion.question,
+            answer: state.answers[renderedQuestion.id],
+          };
+        })
+        .filter((item) => item.answer),
+    };
+
+    const response = await fetch(adaptiveEndpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "Question adaptation failed.");
+
+    const adapted = normalizeAdaptedQuestion(baseQuestion, data.question);
+    if (adapted) {
+      state.adaptedQuestions[baseQuestion.id] = adapted;
+      if (questions[state.index].id === baseQuestion.id && !state.answers[baseQuestion.id]) {
+        render();
+      }
+    }
+  } catch (error) {
+    console.warn(error);
+  } finally {
+    delete state.pendingAdaptations[baseQuestion.id];
+  }
+}
+
+function shouldAdaptQuestion(question) {
+  return state.index >= 5 && adaptiveQuestionIds.has(question.id) && Object.keys(state.answers).length >= 4;
+}
+
+function normalizeAdaptedQuestion(baseQuestion, adapted) {
+  if (!adapted || typeof adapted !== "object") return null;
+
+  const next = {
+    ...baseQuestion,
+    category: cleanText(adapted.category) || baseQuestion.category,
+    kicker: cleanText(adapted.kicker) || baseQuestion.kicker,
+    question: cleanText(adapted.question) || baseQuestion.question,
+    help: cleanText(adapted.help) || baseQuestion.help,
+    label: cleanText(adapted.label) || baseQuestion.label,
+    placeholder: cleanText(adapted.placeholder) || baseQuestion.placeholder,
+  };
+
+  if ((baseQuestion.type === "choice" || baseQuestion.type === "multi") && Array.isArray(adapted.options)) {
+    const options = adapted.options
+      .map((option) => ({
+        label: cleanText(option.label),
+        detail: cleanText(option.detail),
+      }))
+      .filter((option) => option.label && option.detail)
+      .slice(0, 6);
+
+    if (options.length >= 3) next.options = options;
+  }
+
+  return next;
+}
+
+function cleanText(value) {
+  return typeof value === "string" ? value.trim().slice(0, 240) : "";
+}
+
 function getApiEndpoint() {
   const configured = window.CONVERSATION_COACH_API_URL;
   if (typeof configured === "string" && configured.trim()) {
@@ -593,6 +701,16 @@ function getApiEndpoint() {
 
   if (isLocal) return "/api/feedback";
   return "";
+}
+
+function getAdaptiveEndpoint() {
+  const configured = window.CONVERSATION_COACH_ADAPTIVE_URL;
+  if (typeof configured === "string" && configured.trim()) {
+    return configured.trim();
+  }
+
+  if (!apiEndpoint) return "";
+  return apiEndpoint.replace(/\/api\/feedback\/?$/, "/api/adaptive-question");
 }
 
 function drawBackground() {

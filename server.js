@@ -39,6 +39,11 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    if (req.method === "POST" && req.url === "/api/adaptive-question") {
+      await handleAdaptiveQuestion(req, res);
+      return;
+    }
+
     if (req.method !== "GET" && req.method !== "HEAD") {
       sendJson(res, 405, { error: "Method not allowed." });
       return;
@@ -85,7 +90,50 @@ async function handleFeedback(req, res) {
   sendJson(res, 200, { feedback });
 }
 
-async function callOpenAi(prompt) {
+async function handleAdaptiveQuestion(req, res) {
+  if (AI_PROVIDER === "gemini" && !GEMINI_API_KEY) {
+    sendJson(res, 500, {
+      error: "Missing GEMINI_API_KEY on the server.",
+    });
+    return;
+  }
+
+  if (AI_PROVIDER === "openai" && !OPENAI_API_KEY) {
+    sendJson(res, 500, {
+      error: "Missing OPENAI_API_KEY on the server.",
+    });
+    return;
+  }
+
+  const body = await readJsonBody(req);
+  const baseQuestion = body.baseQuestion || {};
+  const answers = Array.isArray(body.answers) ? body.answers : [];
+
+  if (!baseQuestion.id || !baseQuestion.type || !baseQuestion.question) {
+    sendJson(res, 400, { error: "Missing base question." });
+    return;
+  }
+
+  const prompt = buildAdaptiveQuestionPrompt(baseQuestion, answers);
+  let raw;
+  try {
+    raw = AI_PROVIDER === "gemini" ? await callGemini(prompt, 700) : await callOpenAi(prompt, 700);
+  } catch (error) {
+    sendJson(res, 502, { error: error.message || "AI provider request failed." });
+    return;
+  }
+
+  const parsed = parseJsonFromText(raw);
+  const question = normalizeAdaptiveQuestion(baseQuestion, parsed.question || parsed);
+  if (!question) {
+    sendJson(res, 502, { error: "AI returned an invalid adaptive question." });
+    return;
+  }
+
+  sendJson(res, 200, { question });
+}
+
+async function callOpenAi(prompt, maxOutputTokens = 900) {
   const response = await fetch("https://api.openai.com/v1/responses", {
     method: "POST",
     headers: {
@@ -95,7 +143,7 @@ async function callOpenAi(prompt) {
     body: JSON.stringify({
       model: OPENAI_MODEL,
       input: prompt,
-      max_output_tokens: 900,
+      max_output_tokens: maxOutputTokens,
     }),
   });
 
@@ -107,7 +155,7 @@ async function callOpenAi(prompt) {
   return extractOpenAiText(data);
 }
 
-async function callGemini(prompt) {
+async function callGemini(prompt, maxOutputTokens = 900) {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
     GEMINI_MODEL,
   )}:generateContent`;
@@ -125,7 +173,7 @@ async function callGemini(prompt) {
         },
       ],
       generationConfig: {
-        maxOutputTokens: 900,
+        maxOutputTokens,
       },
     }),
   });
@@ -169,6 +217,55 @@ ${JSON.stringify(plan, null, 2)}
 `.trim();
 }
 
+function buildAdaptiveQuestionPrompt(baseQuestion, answers) {
+  const formattedAnswers = answers
+    .map((item) => {
+      const answer = Array.isArray(item.answer) ? item.answer.join(", ") : item.answer;
+      return `${item.category} - ${item.question}\nAnswer: ${answer || "(blank)"}`;
+    })
+    .join("\n\n");
+
+  const optionInstructions =
+    baseQuestion.type === "choice" || baseQuestion.type === "multi"
+      ? "Return 4 to 6 options. Each option must have a short label and one sentence detail."
+      : "Do not return options.";
+
+  return `
+You create unusually useful, personalized questions for a difficult-conversation coaching app.
+
+The app is inspired by fierce conversations: direct truth, care for the relationship, accountability, specificity, and curiosity.
+
+Rewrite the next base question so it fits this user's situation. Keep the same input type: ${baseQuestion.type}.
+
+Make the question sharper than generic advice. It should surface something the user might not think to examine, such as hidden stakes, role confusion, self-protection, assumed intent, cost of silence, concrete repair, or a boundary they are avoiding.
+
+Do not diagnose anyone. Do not invent facts. Do not make the wording therapy-ish or corporate.
+
+Base question:
+${JSON.stringify(baseQuestion, null, 2)}
+
+User answers so far:
+${formattedAnswers || "(No answers yet.)"}
+
+${optionInstructions}
+
+Return only valid JSON in this exact shape:
+{
+  "question": {
+    "category": "short category",
+    "kicker": "two to four words",
+    "question": "one clear personalized question",
+    "help": "one helpful sentence",
+    "label": "short label for text answers, if relevant",
+    "placeholder": "short example answer, if relevant",
+    "options": [
+      { "label": "Option label", "detail": "Option detail." }
+    ]
+  }
+}
+`.trim();
+}
+
 function extractOpenAiText(data) {
   if (data.output_text) return data.output_text;
 
@@ -190,6 +287,55 @@ function extractGeminiText(data) {
     }
   }
   return chunks.join("\n\n").trim();
+}
+
+function parseJsonFromText(text) {
+  const raw = String(text || "").trim();
+  try {
+    return JSON.parse(raw);
+  } catch (error) {
+    const match = raw.match(/\{[\s\S]*\}/);
+    if (!match) return {};
+    try {
+      return JSON.parse(match[0]);
+    } catch (innerError) {
+      return {};
+    }
+  }
+}
+
+function normalizeAdaptiveQuestion(baseQuestion, adapted) {
+  if (!adapted || typeof adapted !== "object") return null;
+
+  const question = {
+    category: cleanText(adapted.category) || baseQuestion.category,
+    kicker: cleanText(adapted.kicker) || baseQuestion.kicker,
+    question: cleanText(adapted.question) || baseQuestion.question,
+    help: cleanText(adapted.help) || baseQuestion.help,
+    label: cleanText(adapted.label) || baseQuestion.label,
+    placeholder: cleanText(adapted.placeholder) || baseQuestion.placeholder,
+  };
+
+  if (baseQuestion.type === "choice" || baseQuestion.type === "multi") {
+    const options = Array.isArray(adapted.options)
+      ? adapted.options
+          .map((option) => ({
+            label: cleanText(option.label),
+            detail: cleanText(option.detail),
+          }))
+          .filter((option) => option.label && option.detail)
+          .slice(0, 6)
+      : [];
+
+    if (options.length < 3) return null;
+    question.options = options;
+  }
+
+  return question;
+}
+
+function cleanText(value) {
+  return typeof value === "string" ? value.trim().slice(0, 280) : "";
 }
 
 function serveStatic(req, res) {

@@ -2,6 +2,11 @@
 
 A guided difficult-conversation planner with optional AI coaching feedback.
 
+The frontend uses the AI backend in two places:
+
+- `/api/adaptive-question` personalizes selected later prompts as the user answers.
+- `/api/feedback` generates the final coaching notes.
+
 ## Run Locally
 
 Create `.env`:
@@ -43,3 +48,4 @@ window.CONVERSATION_COACH_API_URL = "https://your-render-service.onrender.com/ap
 ```
 
 The questionnaire and draft plan work without the backend. Live AI feedback appears once `config.js` points to a deployed backend.
+Adaptive questions also use the same backend URL by swapping `/api/feedback` for `/api/adaptive-question`.
