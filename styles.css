@@ -475,6 +475,10 @@ textarea:focus {
   gap: 20px;
 }
 
+.ai-feedback-full {
+  grid-template-columns: 210px 1fr;
+}
+
 .conversation-guide {
   display: grid;
   gap: 12px;
@@ -496,11 +500,34 @@ textarea:focus {
 
 .ai-feedback-content {
   display: grid;
-  gap: 14px;
+  gap: 12px;
 }
 
 .ai-feedback-content p {
-  white-space: pre-wrap;
+  white-space: normal;
+}
+
+.ai-feedback-content h3 {
+  margin: 10px 0 0;
+  color: var(--ink);
+  font-size: 1.15rem;
+  line-height: 1.25;
+}
+
+.ai-feedback-content h3:first-child {
+  margin-top: 0;
+}
+
+.ai-feedback-content ul,
+.ai-feedback-content ol {
+  margin: 0;
+  padding-left: 22px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.ai-feedback-content li + li {
+  margin-top: 7px;
 }
 
 .ai-feedback-content.is-error p {

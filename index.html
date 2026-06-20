@@ -86,40 +86,16 @@
 
           <section id="resultPanel" class="result-panel" hidden>
             <div class="result-header">
-              <p class="prompt-kicker">Conversation brief</p>
-              <h2>Your clear, kind, no-dodging plan</h2>
+              <p class="prompt-kicker">AI feedback</p>
+              <h2>Your conversation plan</h2>
             </div>
-            <div id="resultIntro" class="result-intro">
-              <p>
-                Your answers are organized into a practical conversation path. Review it before you talk, then use the
-                AI notes to tighten anything vague or too soft.
-              </p>
-              <button id="seePlanButton" class="primary-button" type="button">See your plan</button>
-            </div>
-            <div id="planDetails" class="plan-details" hidden>
-              <div class="guide-block">
-                <div>
-                  <p class="prompt-kicker">Step by step</p>
-                  <h3>Conversation guide</h3>
-                </div>
-                <ol id="conversationGuide" class="conversation-guide"></ol>
+            <div id="aiFeedbackBlock" class="ai-feedback-block ai-feedback-full" aria-live="polite">
+              <div>
+                <p class="prompt-kicker">Honest coaching notes</p>
+                <h3>Generated from your answers</h3>
               </div>
-              <div class="script-block">
-                <div>
-                  <p class="prompt-kicker">Opening script</p>
-                  <h3>Start with this</h3>
-                </div>
-                <p id="openingScript"></p>
-              </div>
-              <div id="briefGrid" class="brief-grid"></div>
-              <div id="aiFeedbackBlock" class="ai-feedback-block" aria-live="polite">
-                <div>
-                  <p class="prompt-kicker">AI feedback</p>
-                  <h3>Honest coaching notes</h3>
-                </div>
-                <div id="aiFeedbackContent" class="ai-feedback-content">
-                  <p>Getting real feedback from the coach...</p>
-                </div>
+              <div id="aiFeedbackContent" class="ai-feedback-content">
+                <p>Building your step-by-step plan...</p>
               </div>
             </div>
             <div class="result-actions">

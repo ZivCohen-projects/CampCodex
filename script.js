@@ -246,13 +246,7 @@ const els = {
   restartButton: document.querySelector("#restartButton"),
   questionCard: document.querySelector("#questionCard"),
   resultPanel: document.querySelector("#resultPanel"),
-  resultIntro: document.querySelector("#resultIntro"),
-  seePlanButton: document.querySelector("#seePlanButton"),
-  planDetails: document.querySelector("#planDetails"),
   personalizedBadge: document.querySelector("#personalizedBadge"),
-  conversationGuide: document.querySelector("#conversationGuide"),
-  briefGrid: document.querySelector("#briefGrid"),
-  openingScript: document.querySelector("#openingScript"),
   aiFeedbackContent: document.querySelector("#aiFeedbackContent"),
   copyButton: document.querySelector("#copyButton"),
   refineButton: document.querySelector("#refineButton"),
@@ -374,7 +368,7 @@ function commitTextAnswer() {
   }
 }
 
-function next() {
+async function next() {
   commitTextAnswer();
   updateNextState();
   if (els.nextButton.disabled) return;
@@ -383,7 +377,17 @@ function next() {
     renderResult();
     return;
   }
-  state.index += 1;
+
+  const nextIndex = state.index + 1;
+  if (shouldAdaptQuestion(questions[nextIndex])) {
+    const originalText = els.nextButton.textContent;
+    els.nextButton.disabled = true;
+    els.nextButton.textContent = "Personalizing...";
+    await withTimeout(adaptQuestionAt(nextIndex, { rerenderCurrent: true }), 1400);
+    els.nextButton.textContent = originalText;
+  }
+
+  state.index = nextIndex;
   render();
 }
 
@@ -435,23 +439,11 @@ function renderResult() {
   const plan = buildPlan();
   els.questionCard.hidden = true;
   els.resultPanel.hidden = false;
-  els.resultIntro.hidden = false;
-  els.planDetails.hidden = true;
   els.stepLabel.textContent = "Plan ready";
   els.progressPercent.textContent = "100%";
   els.progressBar.style.width = "100%";
   renderTrail();
   renderScores();
-  renderConversationGuide(plan);
-
-  els.briefGrid.innerHTML = "";
-  plan.cards.forEach((card) => {
-    const article = document.createElement("article");
-    article.className = "brief-card";
-    article.innerHTML = `<h3>${card.title}</h3><p>${escapeHtml(card.body)}</p>`;
-    els.briefGrid.append(article);
-  });
-  els.openingScript.textContent = plan.script;
   renderAiFeedbackLoading();
   requestAiFeedback(plan);
 }
@@ -546,19 +538,11 @@ function buildPlan() {
 }
 
 function copyPlan() {
-  const plan = buildPlan();
   const aiNotes = els.aiFeedbackContent?.innerText?.trim();
   const text = [
     "Fierce Conversation Plan",
     "",
-    "Step-by-step guide:",
-    ...plan.guide.map((step, index) => `${index + 1}. ${step.title}: ${step.body}`),
-    "",
-    `Opening: ${plan.script}`,
-    "",
-    ...plan.cards.map((card) => `${card.title}: ${card.body}`),
-    "",
-    aiNotes ? `AI feedback:\n${aiNotes}` : "",
+    aiNotes || "The AI plan has not loaded yet.",
   ].join("\n");
 
   navigator.clipboard?.writeText(text).then(() => {
@@ -569,24 +553,9 @@ function copyPlan() {
   });
 }
 
-function revealPlan() {
-  els.resultIntro.hidden = true;
-  els.planDetails.hidden = false;
-  els.seePlanButton.textContent = "Plan shown";
-}
-
-function renderConversationGuide(plan) {
-  els.conversationGuide.innerHTML = "";
-  plan.guide.forEach((step) => {
-    const li = document.createElement("li");
-    li.innerHTML = `<strong>${escapeHtml(step.title)}</strong>${escapeHtml(step.body)}`;
-    els.conversationGuide.append(li);
-  });
-}
-
 function renderAiFeedbackLoading() {
   els.aiFeedbackContent.classList.remove("is-error");
-  els.aiFeedbackContent.innerHTML = "<p>Getting real feedback from the coach...</p>";
+  els.aiFeedbackContent.innerHTML = "<p>Building your step-by-step plan...</p>";
 }
 
 async function requestAiFeedback(plan) {
@@ -633,10 +602,7 @@ function renderAiFeedback(feedback) {
   }
 
   els.aiFeedbackContent.classList.remove("is-error");
-  els.aiFeedbackContent.innerHTML = text
-    .split(/\n{2,}/)
-    .map((paragraph) => `<p>${escapeHtml(paragraph.trim())}</p>`)
-    .join("");
+  els.aiFeedbackContent.innerHTML = formatFeedbackHtml(text);
 }
 
 function lowerFirst(value) {
@@ -665,7 +631,11 @@ function getQuestionById(id) {
 }
 
 async function requestAdaptiveQuestion() {
-  const baseQuestion = questions[state.index];
+  await adaptQuestionAt(state.index, { rerenderCurrent: true });
+}
+
+async function adaptQuestionAt(index, options = {}) {
+  const baseQuestion = questions[index];
   if (!shouldAdaptQuestion(baseQuestion)) return;
   if (!adaptiveEndpoint) return;
   if (state.answers[baseQuestion.id]) return;
@@ -677,7 +647,7 @@ async function requestAdaptiveQuestion() {
     const payload = {
       baseQuestion,
       answers: questions
-        .slice(0, state.index)
+        .slice(0, index)
         .map((question, index) => {
           const renderedQuestion = getQuestionAt(index);
           return {
@@ -702,7 +672,7 @@ async function requestAdaptiveQuestion() {
     const adapted = normalizeAdaptedQuestion(baseQuestion, data.question);
     if (adapted) {
       state.adaptedQuestions[baseQuestion.id] = adapted;
-      if (questions[state.index].id === baseQuestion.id && !state.answers[baseQuestion.id]) {
+      if (options.rerenderCurrent && questions[state.index].id === baseQuestion.id && !state.answers[baseQuestion.id]) {
         render();
       }
     }
@@ -747,6 +717,83 @@ function normalizeAdaptedQuestion(baseQuestion, adapted) {
 
 function cleanText(value) {
   return typeof value === "string" ? value.trim().slice(0, 240) : "";
+}
+
+function withTimeout(promise, ms) {
+  return Promise.race([
+    promise,
+    new Promise((resolve) => {
+      setTimeout(resolve, ms);
+    }),
+  ]);
+}
+
+function formatFeedbackHtml(text) {
+  const lines = text
+    .replace(/\r/g, "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  const html = [];
+  let listType = "";
+  let listItems = [];
+
+  const flushList = () => {
+    if (!listItems.length) return;
+    html.push(`<${listType}>${listItems.join("")}</${listType}>`);
+    listItems = [];
+    listType = "";
+  };
+
+  lines.forEach((line) => {
+    const normalized = stripMarkdown(line);
+    const sectionTitleMatch = normalized.match(
+      /^\d+\.\s+(Strongest part|What they may be avoiding|Step-by-step conversation guide|Cleaner opening|Watch-outs|Final reminder)$/i,
+    );
+    const headingMatch = normalized.match(/^(?:\d+\.\s+)?([A-Z][A-Za-z -]{2,70})$/);
+    const markdownHeading = line.match(/^#{1,6}\s+(.+)/);
+    const bulletMatch = normalized.match(/^[-*]\s+(.+)/);
+    const numberedMatch = normalized.match(/^\d+\.\s+(.+)/);
+
+    if (markdownHeading) {
+      flushList();
+      html.push(`<h3>${escapeHtml(stripSectionNumber(stripMarkdown(markdownHeading[1])))}</h3>`);
+    } else if (sectionTitleMatch) {
+      flushList();
+      html.push(`<h3>${escapeHtml(sectionTitleMatch[1])}</h3>`);
+    } else if (bulletMatch) {
+      if (listType !== "ul") flushList();
+      listType = "ul";
+      listItems.push(`<li>${escapeHtml(bulletMatch[1])}</li>`);
+    } else if (numberedMatch && normalized.length < 220) {
+      if (listType !== "ol") flushList();
+      listType = "ol";
+      listItems.push(`<li>${escapeHtml(numberedMatch[1])}</li>`);
+    } else if (headingMatch && normalized.length < 80) {
+      flushList();
+      html.push(`<h3>${escapeHtml(headingMatch[1])}</h3>`);
+    } else {
+      flushList();
+      html.push(`<p>${escapeHtml(normalized)}</p>`);
+    }
+  });
+
+  flushList();
+  return html.join("");
+}
+
+function stripMarkdown(value) {
+  return String(value)
+    .replace(/^#{1,6}\s*/, "")
+    .replace(/\*\*(.*?)\*\*/g, "$1")
+    .replace(/__(.*?)__/g, "$1")
+    .replace(/\*(.*?)\*/g, "$1")
+    .trim();
+}
+
+function stripSectionNumber(value) {
+  return String(value).replace(/^\d+\.\s+/, "").trim();
 }
 
 function getApiEndpoint() {
@@ -838,7 +885,6 @@ els.nextButton.addEventListener("click", next);
 els.backButton.addEventListener("click", back);
 els.restartButton.addEventListener("click", restart);
 els.copyButton.addEventListener("click", copyPlan);
-els.seePlanButton.addEventListener("click", revealPlan);
 els.refineButton.addEventListener("click", () => {
   state.index = Math.max(0, questions.length - 3);
   render();

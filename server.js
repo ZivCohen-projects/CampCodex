@@ -81,7 +81,7 @@ async function handleFeedback(req, res) {
   const prompt = buildCoachPrompt(answers, plan);
   let feedback;
   try {
-    feedback = AI_PROVIDER === "gemini" ? await callGemini(prompt, 1600) : await callOpenAi(prompt, 1600);
+    feedback = AI_PROVIDER === "gemini" ? await callGemini(prompt, 2600) : await callOpenAi(prompt, 2600);
   } catch (error) {
     sendJson(res, 502, { error: error.message || "AI provider request failed." });
     return;
@@ -224,6 +224,8 @@ End with one sentence they should remember right before starting.
 
 Tone: honest, grounded, concise, compassionate, and useful. Do not over-validate. Do not diagnose anyone. Do not invent facts beyond the answers.
 Do not stop after section 1 or 2. Keep going until the final reminder is complete.
+Write enough substance that the user could follow the plan without guessing what to do next.
+Do not use Markdown heading markers like #, ##, or ###. Use plain section titles.
 
 Answers:
 ${formattedAnswers}
