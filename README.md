@@ -24,15 +24,21 @@ Open `http://localhost:3000`.
 
 GitHub Pages can host the frontend, but it cannot run `server.js` or hide `OPENAI_API_KEY`.
 
-To use AI feedback on GitHub Pages:
+Current GitHub Pages frontend:
 
-1. Deploy this repo's `server.js` to a backend host such as Render, Railway, Fly, or Vercel.
-2. Set `OPENAI_API_KEY` on that host.
-3. Set `ALLOWED_ORIGIN=https://zivcohen-projects.github.io` on that host.
-4. Edit `config.js` in the GitHub Pages repo:
+https://zivcohen-projects.github.io/CampCodex/
+
+To use AI feedback on GitHub Pages with Render:
+
+1. Go to https://dashboard.render.com/blueprints.
+2. Click "New Blueprint Instance".
+3. Connect `ZivCohen-projects/CampCodex`.
+4. When Render asks for environment variables, set `OPENAI_API_KEY`.
+5. Deploy the service.
+6. Copy the Render service URL and edit `config.js`:
 
 ```js
-window.CONVERSATION_COACH_API_URL = "https://your-backend.example.com/api/feedback";
+window.CONVERSATION_COACH_API_URL = "https://your-render-service.onrender.com/api/feedback";
 ```
 
 The questionnaire and draft plan work without the backend. Live AI feedback appears once `config.js` points to a deployed backend.

@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: camp-codex-conversation-coach
+    env: node
+    plan: free
+    buildCommand: ""
+    startCommand: node server.js
+    envVars:
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_MODEL
+        value: gpt-5.4-mini
+      - key: ALLOWED_ORIGIN
+        value: https://zivcohen-projects.github.io
