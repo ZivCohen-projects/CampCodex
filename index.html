@@ -59,13 +59,35 @@
             </button>
           </div>
 
-          <div class="depth-selector" aria-label="Question count">
-            <span>Depth</span>
-            <button type="button" data-question-count="5" aria-pressed="false">5</button>
-            <button type="button" data-question-count="10" aria-pressed="true">10</button>
-            <button type="button" data-question-count="15" aria-pressed="false">15</button>
-            <button type="button" data-question-count="20" aria-pressed="false">20</button>
-          </div>
+          <section id="depthPanel" class="depth-panel" aria-labelledby="depthTitle">
+            <p class="prompt-kicker">Fierce Conversation Coach</p>
+            <h2 id="depthTitle">Choose how deep you want to go.</h2>
+            <p class="depth-intro">
+              Pick a prep length. Shorter gives you a fast plan; longer gives the AI coach more context for a sharper guideline.
+            </p>
+            <div class="depth-options" aria-label="Question count">
+              <button type="button" class="depth-card" data-question-count="5">
+                <strong>5 questions</strong>
+                <span>Fast conclusion</span>
+                <p>For a quick read on the issue, the ask, and the cleanest next step.</p>
+              </button>
+              <button type="button" class="depth-card" data-question-count="10">
+                <strong>10 questions</strong>
+                <span>Focused plan</span>
+                <p>A balanced prep that covers truth, tone, timing, and likely pushback.</p>
+              </button>
+              <button type="button" class="depth-card" data-question-count="15">
+                <strong>15 questions</strong>
+                <span>Full picture</span>
+                <p>More context around patterns, power, boundaries, and repair.</p>
+              </button>
+              <button type="button" class="depth-card" data-question-count="20">
+                <strong>20 questions</strong>
+                <span>Deep prep</span>
+                <p>Best for high-stakes talks where the final plan should be detailed.</p>
+              </button>
+            </div>
+          </section>
 
           <div id="questionCard" class="question-card">
             <div class="prompt-row">

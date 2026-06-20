@@ -232,37 +232,73 @@ h1 {
   font-weight: 750;
 }
 
-.depth-selector {
-  width: fit-content;
-  display: inline-grid;
-  grid-template-columns: auto repeat(4, 42px);
-  align-items: center;
-  gap: 6px;
-  padding: 6px;
-  border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.62);
+.depth-panel {
+  display: grid;
+  gap: 18px;
 }
 
-.depth-selector span {
-  padding: 0 8px;
+.depth-panel h2 {
+  margin-bottom: 0;
+  max-width: 760px;
+  font-size: clamp(2.25rem, 5vw, 4.6rem);
+  line-height: 0.98;
+  letter-spacing: 0;
+}
+
+.depth-intro {
+  max-width: 650px;
+  margin: -4px 0 0;
   color: var(--muted);
+  font-size: clamp(1rem, 1.5vw, 1.15rem);
+  line-height: 1.55;
+}
+
+.depth-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.depth-card {
+  min-height: 154px;
+  padding: 18px;
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  color: var(--ink);
+  text-align: left;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.72);
+  cursor: pointer;
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    background 160ms ease;
+}
+
+.depth-card:hover,
+.depth-card:focus-visible {
+  transform: translateY(-2px);
+  border-color: rgba(24, 32, 29, 0.36);
+  background: linear-gradient(135deg, rgba(42, 157, 143, 0.13), rgba(242, 193, 78, 0.18));
+}
+
+.depth-card strong {
+  font-size: clamp(1.15rem, 1.8vw, 1.45rem);
+  line-height: 1.1;
+}
+
+.depth-card span {
+  color: var(--teal-dark);
   font-size: 0.78rem;
-  font-weight: 800;
+  font-weight: 850;
   text-transform: uppercase;
 }
 
-.depth-selector button {
-  min-height: 34px;
-  color: var(--ink);
-  background: transparent;
-  cursor: pointer;
-  font-weight: 850;
-}
-
-.depth-selector button:hover,
-.depth-selector button.is-selected {
-  color: white;
-  background: var(--ink);
+.depth-card p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.45;
 }
 
 .icon-button {
@@ -587,6 +623,7 @@ textarea:focus {
 
   .options-panel,
   .multi-panel,
+  .depth-options,
   .brief-grid,
   .result-intro,
   .script-block,
@@ -611,6 +648,7 @@ textarea:focus {
   }
 
   .question-card h2,
+  .depth-panel h2,
   .result-panel h2 {
     font-size: 2rem;
     line-height: 1.04;

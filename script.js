@@ -700,6 +700,7 @@ function shuffle(items) {
 const state = {
   index: 0,
   selectedCount: 10,
+  hasStarted: false,
   answers: {},
 };
 
@@ -723,6 +724,7 @@ const els = {
   textAnswer: document.querySelector("#textAnswer"),
   scalePanel: document.querySelector("#scalePanel"),
   multiPanel: document.querySelector("#multiPanel"),
+  depthPanel: document.querySelector("#depthPanel"),
   depthButtons: document.querySelectorAll("[data-question-count]"),
   backButton: document.querySelector("#backButton"),
   nextButton: document.querySelector("#nextButton"),
@@ -735,12 +737,19 @@ const els = {
 };
 
 function render() {
+  if (!state.hasStarted) {
+    renderDepthScreen();
+    return;
+  }
+
   const question = getCurrentQuestion();
   const completed = Object.keys(state.answers).length;
   const percent = Math.round((completed / questions.length) * 100);
 
+  els.depthPanel.hidden = true;
   els.questionCard.hidden = false;
   els.resultPanel.hidden = true;
+  els.restartButton.hidden = false;
   els.stepLabel.textContent = `Question ${state.index + 1} of ${questions.length}`;
   els.progressPercent.textContent = `${percent}%`;
   els.progressBar.style.width = `${percent}%`;
@@ -751,7 +760,6 @@ function render() {
   els.backButton.disabled = state.index === 0;
   els.nextButton.textContent = state.index === questions.length - 1 ? "Build plan" : "Next";
 
-  renderDepthButtons();
   hideInputs();
   renderTrail();
   renderScores();
@@ -762,6 +770,20 @@ function render() {
   if (question.type === "multi") renderMulti(question);
 
   updateNextState();
+}
+
+function renderDepthScreen() {
+  els.depthPanel.hidden = false;
+  els.questionCard.hidden = true;
+  els.resultPanel.hidden = true;
+  els.restartButton.hidden = true;
+  els.stepLabel.textContent = "Choose depth";
+  els.progressPercent.textContent = "0%";
+  els.progressBar.style.width = "0%";
+  els.categoryLabel.textContent = "Prep depth";
+  renderDepthButtons();
+  renderTrail();
+  renderScores();
 }
 
 function hideInputs() {
@@ -874,14 +896,15 @@ function back() {
 function restart() {
   state.index = 0;
   state.answers = {};
-  questions = createQuestionSet(state.selectedCount);
+  state.hasStarted = false;
   render();
 }
 
-function setQuestionCount(count) {
-  if (!questionDepthOptions.includes(count) || count === state.selectedCount) return;
+function startQuestionnaire(count) {
+  if (!questionDepthOptions.includes(count)) return;
   state.selectedCount = count;
   state.index = 0;
+  state.hasStarted = true;
   state.answers = {};
   questions = createQuestionSet(count);
   render();
@@ -1287,7 +1310,7 @@ els.nextButton.addEventListener("click", next);
 els.backButton.addEventListener("click", back);
 els.restartButton.addEventListener("click", restart);
 els.depthButtons.forEach((button) => {
-  button.addEventListener("click", () => setQuestionCount(Number(button.dataset.questionCount)));
+  button.addEventListener("click", () => startQuestionnaire(Number(button.dataset.questionCount)));
 });
 els.copyButton.addEventListener("click", copyPlan);
 els.refineButton.addEventListener("click", () => {
@@ -1295,6 +1318,7 @@ els.refineButton.addEventListener("click", () => {
   render();
 });
 els.textAnswer.addEventListener("input", () => {
+  if (!state.hasStarted) return;
   const question = questions[state.index];
   state.answers[question.id] = els.textAnswer.value.trim();
   updateNextState();
