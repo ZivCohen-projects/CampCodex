@@ -189,7 +189,7 @@ async function callGemini(prompt, maxOutputTokens = 900) {
 function buildCoachPrompt(answers, plan) {
   const formattedAnswers = answers
     .map((item) => {
-      const answer = Array.isArray(item.answer) ? item.answer.join(", ") : item.answer;
+      const answer = item.answerDisplay || (Array.isArray(item.answer) ? item.answer.join(", ") : item.answer);
       return `${item.category} - ${item.question}\nAnswer: ${answer || "(blank)"}`;
     })
     .join("\n\n");
@@ -226,6 +226,7 @@ Tone: honest, grounded, concise, compassionate, and useful. Do not over-validate
 Do not stop after section 1 or 2. Keep going until the final reminder is complete.
 Write enough substance that the user could follow the plan without guessing what to do next.
 Do not use Markdown heading markers like #, ##, or ###. Use plain section titles.
+The readiness answer is on a 1-5 scale only. Never call it a score out of 10.
 
 Answers:
 ${formattedAnswers}
@@ -238,7 +239,7 @@ ${JSON.stringify(plan, null, 2)}
 function buildAdaptiveQuestionPrompt(baseQuestion, answers) {
   const formattedAnswers = answers
     .map((item) => {
-      const answer = Array.isArray(item.answer) ? item.answer.join(", ") : item.answer;
+      const answer = item.answerDisplay || (Array.isArray(item.answer) ? item.answer.join(", ") : item.answer);
       return `${item.category} - ${item.question}\nAnswer: ${answer || "(blank)"}`;
     })
     .join("\n\n");
@@ -254,6 +255,7 @@ You create unusually useful, personalized questions for a difficult-conversation
 The app is inspired by fierce conversations: direct truth, care for the relationship, accountability, specificity, and curiosity.
 
 Rewrite the next base question so it fits this user's situation. Keep the same input type: ${baseQuestion.type}.
+The rewritten question must be meaningfully different from the base question. Do not return the same wording with tiny edits.
 
 Make the question sharper than generic advice. It should surface something the user might not think to examine, such as hidden stakes, role confusion, self-protection, assumed intent, cost of silence, concrete repair, or a boundary they are avoiding.
 

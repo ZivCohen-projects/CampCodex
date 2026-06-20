@@ -216,6 +216,7 @@ const state = {
   index: 0,
   answers: {},
   adaptedQuestions: {},
+  adaptationSources: {},
   pendingAdaptations: {},
 };
 
@@ -265,6 +266,8 @@ function render() {
   els.categoryLabel.textContent = question.category;
   els.promptKicker.textContent = question.kicker;
   els.personalizedBadge.hidden = !state.adaptedQuestions[question.id];
+  els.personalizedBadge.textContent =
+    state.adaptationSources[question.id] === "ai" ? "Personalized by AI" : "Personalized";
   els.questionText.textContent = question.question;
   els.questionHelp.textContent = question.help;
   els.backButton.disabled = state.index === 0;
@@ -384,6 +387,9 @@ async function next() {
     els.nextButton.disabled = true;
     els.nextButton.textContent = "Personalizing...";
     await withTimeout(adaptQuestionAt(nextIndex, { rerenderCurrent: true }), 1400);
+    if (!state.adaptedQuestions[questions[nextIndex].id]) {
+      applyLocalAdaptation(nextIndex);
+    }
     els.nextButton.textContent = originalText;
   }
 
@@ -403,6 +409,7 @@ function restart() {
   state.index = 0;
   state.answers = {};
   state.adaptedQuestions = {};
+  state.adaptationSources = {};
   state.pendingAdaptations = {};
   render();
 }
@@ -572,6 +579,7 @@ async function requestAiFeedback(plan) {
         category: getQuestionById(question.id).category,
         question: getQuestionById(question.id).question,
         answer: state.answers[question.id],
+        answerDisplay: formatAnswerForAi(question, state.answers[question.id]),
       })),
       plan,
     };
@@ -655,6 +663,7 @@ async function adaptQuestionAt(index, options = {}) {
             category: renderedQuestion.category,
             question: renderedQuestion.question,
             answer: state.answers[renderedQuestion.id],
+            answerDisplay: formatAnswerForAi(renderedQuestion, state.answers[renderedQuestion.id]),
           };
         })
         .filter((item) => item.answer),
@@ -672,12 +681,14 @@ async function adaptQuestionAt(index, options = {}) {
     const adapted = normalizeAdaptedQuestion(baseQuestion, data.question);
     if (adapted) {
       state.adaptedQuestions[baseQuestion.id] = adapted;
+      state.adaptationSources[baseQuestion.id] = "ai";
       if (options.rerenderCurrent && questions[state.index].id === baseQuestion.id && !state.answers[baseQuestion.id]) {
         render();
       }
     }
   } catch (error) {
     console.warn(error);
+    applyLocalAdaptation(index);
   } finally {
     delete state.pendingAdaptations[baseQuestion.id];
   }
@@ -712,11 +723,114 @@ function normalizeAdaptedQuestion(baseQuestion, adapted) {
     if (options.length >= 3) next.options = options;
   }
 
-  return next;
+  return isMeaningfullyDifferent(baseQuestion, next) ? next : null;
 }
 
 function cleanText(value) {
   return typeof value === "string" ? value.trim().slice(0, 240) : "";
+}
+
+function isMeaningfullyDifferent(baseQuestion, adaptedQuestion) {
+  const normalize = (value) =>
+    String(value || "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, " ")
+      .trim();
+  return normalize(baseQuestion.question) !== normalize(adaptedQuestion.question);
+}
+
+function applyLocalAdaptation(index) {
+  const baseQuestion = questions[index];
+  if (!shouldAdaptQuestion(baseQuestion)) return;
+  if (state.answers[baseQuestion.id] || state.adaptedQuestions[baseQuestion.id]) return;
+
+  const adapted = buildLocalAdaptiveQuestion(baseQuestion);
+  if (!adapted || !isMeaningfullyDifferent(baseQuestion, adapted)) return;
+
+  state.adaptedQuestions[baseQuestion.id] = adapted;
+  state.adaptationSources[baseQuestion.id] = "local";
+  if (questions[state.index].id === baseQuestion.id && !state.answers[baseQuestion.id]) {
+    render();
+  }
+}
+
+function buildLocalAdaptiveQuestion(baseQuestion) {
+  const issue = state.answers.issue || "this issue";
+  const relationship = state.answers.relationship || "this person";
+  const pattern = state.answers.pattern || "this pattern";
+  const stakes = state.answers.stakes || "what is at stake";
+  const evidence = state.answers.evidence || "the examples you named";
+  const yourPart = state.answers.yourPart || "your part";
+
+  const shared = {
+    ...baseQuestion,
+    category: baseQuestion.category,
+  };
+
+  const adaptations = {
+    emotion: {
+      ...shared,
+      kicker: "Under the surface",
+      question: `When you picture telling this ${String(relationship).toLowerCase()} about ${asPhrase(issue)}, what reaction in yourself are you most trying not to show?`,
+      help: "Pick the emotion you would need to manage so the conversation stays honest instead of reactive.",
+    },
+    personStyle: {
+      ...shared,
+      kicker: "Their defenses",
+      question: `Given ${asPhrase(pattern)} and ${asPhrase(evidence)}, what response should you be ready for from this ${String(relationship).toLowerCase()}?`,
+      help: "Choose the behaviors you should plan around without assuming bad intent.",
+    },
+    request: {
+      ...shared,
+      kicker: "The real ask",
+      question: `What exact change would protect ${asPhrase(stakes)} without making this ${String(relationship).toLowerCase()} guess what you need?`,
+      help: "Make the request observable enough that both of you could tell whether it happened.",
+      placeholder: "Example: I need the handoff notes by 3pm on Thursdays, or a heads-up by noon if they will be late.",
+    },
+    opening: {
+      ...shared,
+      kicker: "First sentence",
+      question: `How can you open by naming ${asPhrase(issue)} while also owning ${asPhrase(yourPart)}?`,
+      help: "Start with the truth, then signal that you want a productive conversation rather than a verdict.",
+      placeholder: "Example: I want to talk about the handoff pattern, and I realize I waited too long to bring it up directly.",
+    },
+    curiosity: {
+      ...shared,
+      kicker: "Check your story",
+      question: `Before you decide what this ${String(relationship).toLowerCase()} meant by ${asPhrase(pattern)}, what question would test your assumption?`,
+      help: "Ask something that could actually change your understanding.",
+      placeholder: "Example: What is getting in the way of the handoffs from your side?",
+    },
+    success: {
+      ...shared,
+      kicker: "Proof of change",
+      question: `One week after this conversation, what would prove that ${asPhrase(stakes)} is being protected better?`,
+      help: "Define success as a visible behavior, not just a better feeling.",
+      placeholder: "Example: We have a clear handoff rhythm, and I am not silently checking every deadline myself.",
+    },
+  };
+
+  return adaptations[baseQuestion.id] || null;
+}
+
+function shorten(value) {
+  const text = String(value || "").trim();
+  return text.length > 90 ? `${text.slice(0, 87)}...` : text;
+}
+
+function asPhrase(value) {
+  const text = shorten(value).replace(/[.?!]+$/, "");
+  return text ? text.charAt(0).toLowerCase() + text.slice(1) : "this";
+}
+
+function formatAnswerForAi(question, answer) {
+  if (answer === undefined || answer === null || answer === "") return "";
+  if (Array.isArray(answer)) return answer.join(", ");
+  if (question.id === "readiness") {
+    const label = question.labels?.[Number(answer) - 1];
+    return `${answer}${label ? ` (${label})` : ""} on a 1-5 readiness scale`;
+  }
+  return String(answer);
 }
 
 function withTimeout(promise, ms) {
@@ -738,23 +852,28 @@ function formatFeedbackHtml(text) {
   const html = [];
   let listType = "";
   let listItems = [];
+  let orderedListStart = 1;
+  let lastOrderedNumber = 0;
 
   const flushList = () => {
     if (!listItems.length) return;
-    html.push(`<${listType}>${listItems.join("")}</${listType}>`);
+    const startAttribute = listType === "ol" && orderedListStart !== 1 ? ` start="${orderedListStart}"` : "";
+    html.push(`<${listType}${startAttribute}>${listItems.join("")}</${listType}>`);
     listItems = [];
     listType = "";
+    orderedListStart = 1;
+    lastOrderedNumber = 0;
   };
 
   lines.forEach((line) => {
     const normalized = stripMarkdown(line);
     const sectionTitleMatch = normalized.match(
-      /^\d+\.\s+(Strongest part|What they may be avoiding|Step-by-step conversation guide|Cleaner opening|Watch-outs|Final reminder)$/i,
+      /^\d+\.\s+(Strongest part|What they may be avoiding|Step-by-step conversation guide|Cleaner opening|Watch-outs|Final reminder)(?::\s*(.+))?$/i,
     );
     const headingMatch = normalized.match(/^(?:\d+\.\s+)?([A-Z][A-Za-z -]{2,70})$/);
     const markdownHeading = line.match(/^#{1,6}\s+(.+)/);
     const bulletMatch = normalized.match(/^[-*]\s+(.+)/);
-    const numberedMatch = normalized.match(/^\d+\.\s+(.+)/);
+    const numberedMatch = normalized.match(/^(\d+)\.\s+(.+)/);
 
     if (markdownHeading) {
       flushList();
@@ -762,14 +881,26 @@ function formatFeedbackHtml(text) {
     } else if (sectionTitleMatch) {
       flushList();
       html.push(`<h3>${escapeHtml(sectionTitleMatch[1])}</h3>`);
+      if (sectionTitleMatch[2]) {
+        html.push(`<p>${escapeHtml(sectionTitleMatch[2])}</p>`);
+      }
     } else if (bulletMatch) {
       if (listType !== "ul") flushList();
       listType = "ul";
       listItems.push(`<li>${escapeHtml(bulletMatch[1])}</li>`);
     } else if (numberedMatch && normalized.length < 220) {
+      const itemNumber = Number(numberedMatch[1]);
       if (listType !== "ol") flushList();
+      if (listType !== "ol") {
+        orderedListStart = itemNumber;
+      } else if (lastOrderedNumber && itemNumber !== lastOrderedNumber + 1) {
+        flushList();
+        listType = "ol";
+        orderedListStart = itemNumber;
+      }
       listType = "ol";
-      listItems.push(`<li>${escapeHtml(numberedMatch[1])}</li>`);
+      listItems.push(`<li>${escapeHtml(numberedMatch[2])}</li>`);
+      lastOrderedNumber = itemNumber;
     } else if (headingMatch && normalized.length < 80) {
       flushList();
       html.push(`<h3>${escapeHtml(headingMatch[1])}</h3>`);
