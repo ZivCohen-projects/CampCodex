@@ -5,11 +5,16 @@ const path = require("node:path");
 loadEnvFile();
 
 const PORT = Number(process.env.PORT || 3000);
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+const OPENAI_API_KEYS = readList(process.env.OPENAI_API_KEYS || process.env.OPENAI_API_KEY);
 const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const GEMINI_API_KEYS = readList(process.env.GEMINI_API_KEYS || process.env.GEMINI_API_KEY);
 const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.5-flash";
-const AI_PROVIDER = (process.env.AI_PROVIDER || (GEMINI_API_KEY ? "gemini" : "openai")).toLowerCase();
+const ANTHROPIC_API_KEYS = readList(process.env.ANTHROPIC_API_KEYS || process.env.ANTHROPIC_API_KEY);
+const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || "claude-haiku-4-5";
+const AI_PROVIDER_ORDER = readList(
+  process.env.AI_PROVIDER_ORDER || process.env.AI_PROVIDER || "gemini,openai,anthropic",
+).map((provider) => provider.toLowerCase());
+const USE_AI_ADAPTIVE_QUESTIONS = process.env.USE_AI_ADAPTIVE_QUESTIONS === "true";
 const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || "*";
 const PUBLIC_DIR = __dirname;
 
@@ -60,20 +65,6 @@ server.listen(PORT, () => {
 });
 
 async function handleFeedback(req, res) {
-  if (AI_PROVIDER === "gemini" && !GEMINI_API_KEY) {
-    sendJson(res, 500, {
-      error: "Missing GEMINI_API_KEY on the server.",
-    });
-    return;
-  }
-
-  if (AI_PROVIDER === "openai" && !OPENAI_API_KEY) {
-    sendJson(res, 500, {
-      error: "Missing OPENAI_API_KEY on the server.",
-    });
-    return;
-  }
-
   const body = await readJsonBody(req);
   const answers = Array.isArray(body.answers) ? body.answers : [];
   const plan = body.plan || {};
@@ -81,7 +72,7 @@ async function handleFeedback(req, res) {
   const prompt = buildCoachPrompt(answers, plan);
   let feedback;
   try {
-    feedback = AI_PROVIDER === "gemini" ? await callGemini(prompt, 2600) : await callOpenAi(prompt, 2600);
+    feedback = await callAiWithFallback(prompt, 2600);
   } catch (error) {
     sendJson(res, 502, { error: error.message || "AI provider request failed." });
     return;
@@ -91,16 +82,9 @@ async function handleFeedback(req, res) {
 }
 
 async function handleAdaptiveQuestion(req, res) {
-  if (AI_PROVIDER === "gemini" && !GEMINI_API_KEY) {
-    sendJson(res, 500, {
-      error: "Missing GEMINI_API_KEY on the server.",
-    });
-    return;
-  }
-
-  if (AI_PROVIDER === "openai" && !OPENAI_API_KEY) {
-    sendJson(res, 500, {
-      error: "Missing OPENAI_API_KEY on the server.",
+  if (!USE_AI_ADAPTIVE_QUESTIONS) {
+    sendJson(res, 503, {
+      error: "AI adaptive questions are disabled. The frontend will use local personalization.",
     });
     return;
   }
@@ -117,7 +101,7 @@ async function handleAdaptiveQuestion(req, res) {
   const prompt = buildAdaptiveQuestionPrompt(baseQuestion, answers);
   let raw;
   try {
-    raw = AI_PROVIDER === "gemini" ? await callGemini(prompt, 700) : await callOpenAi(prompt, 700);
+    raw = await callAiWithFallback(prompt, 700);
   } catch (error) {
     sendJson(res, 502, { error: error.message || "AI provider request failed." });
     return;
@@ -133,12 +117,55 @@ async function handleAdaptiveQuestion(req, res) {
   sendJson(res, 200, { question });
 }
 
-async function callOpenAi(prompt, maxOutputTokens = 900) {
+async function callAiWithFallback(prompt, maxOutputTokens = 900) {
+  const attempts = buildProviderAttempts();
+  if (!attempts.length) {
+    throw new Error(
+      "No AI provider keys are configured. Add GEMINI_API_KEYS, OPENAI_API_KEYS, or ANTHROPIC_API_KEYS.",
+    );
+  }
+
+  const errors = [];
+  for (const attempt of attempts) {
+    try {
+      if (attempt.provider === "gemini") return await callGemini(prompt, maxOutputTokens, attempt.key);
+      if (attempt.provider === "openai") return await callOpenAi(prompt, maxOutputTokens, attempt.key);
+      if (attempt.provider === "anthropic") return await callAnthropic(prompt, maxOutputTokens, attempt.key);
+    } catch (error) {
+      errors.push(`${attempt.provider}: ${error.message}`);
+      if (!shouldTryNextProvider(error)) throw error;
+    }
+  }
+
+  throw new Error(`All configured AI providers failed. ${errors.join(" | ")}`);
+}
+
+function buildProviderAttempts() {
+  const keyMap = {
+    gemini: GEMINI_API_KEYS,
+    openai: OPENAI_API_KEYS,
+    anthropic: ANTHROPIC_API_KEYS,
+  };
+
+  return AI_PROVIDER_ORDER.flatMap((provider) =>
+    (keyMap[provider] || []).map((key, index) => ({
+      provider,
+      key,
+      index,
+    })),
+  );
+}
+
+function shouldTryNextProvider(error) {
+  return [401, 403, 429, 500, 502, 503, 504].includes(error.status);
+}
+
+async function callOpenAi(prompt, maxOutputTokens = 900, apiKey) {
   const response = await fetch("https://api.openai.com/v1/responses", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${OPENAI_API_KEY}`,
+      Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
       model: OPENAI_MODEL,
@@ -149,13 +176,13 @@ async function callOpenAi(prompt, maxOutputTokens = 900) {
 
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    throw new Error(data.error?.message || "OpenAI request failed.");
+    throw providerError(response.status, data.error?.message || "OpenAI request failed.");
   }
 
   return extractOpenAiText(data);
 }
 
-async function callGemini(prompt, maxOutputTokens = 900) {
+async function callGemini(prompt, maxOutputTokens = 900, apiKey) {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
     GEMINI_MODEL,
   )}:generateContent`;
@@ -164,7 +191,7 @@ async function callGemini(prompt, maxOutputTokens = 900) {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "x-goog-api-key": GEMINI_API_KEY,
+      "x-goog-api-key": apiKey,
     },
     body: JSON.stringify({
       contents: [
@@ -180,10 +207,38 @@ async function callGemini(prompt, maxOutputTokens = 900) {
 
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    throw new Error(data.error?.message || "Gemini request failed.");
+    throw providerError(response.status, data.error?.message || "Gemini request failed.");
   }
 
   return extractGeminiText(data);
+}
+
+async function callAnthropic(prompt, maxOutputTokens = 900, apiKey) {
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify({
+      model: ANTHROPIC_MODEL,
+      max_tokens: maxOutputTokens,
+      messages: [
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+    }),
+  });
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw providerError(response.status, data.error?.message || "Anthropic request failed.");
+  }
+
+  return extractAnthropicText(data);
 }
 
 function buildCoachPrompt(answers, plan) {
@@ -309,6 +364,20 @@ function extractGeminiText(data) {
   return chunks.join("\n\n").trim();
 }
 
+function extractAnthropicText(data) {
+  const chunks = [];
+  for (const item of data.content || []) {
+    if (item.type === "text" && item.text) chunks.push(item.text);
+  }
+  return chunks.join("\n\n").trim();
+}
+
+function providerError(status, message) {
+  const error = new Error(message);
+  error.status = status;
+  return error;
+}
+
 function parseJsonFromText(text) {
   const raw = String(text || "").trim();
   try {
@@ -417,6 +486,13 @@ function setCorsHeaders(res) {
   res.setHeader("Access-Control-Allow-Origin", ALLOWED_ORIGIN);
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+}
+
+function readList(value) {
+  return String(value || "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
 }
 
 function loadEnvFile() {

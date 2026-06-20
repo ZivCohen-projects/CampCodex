@@ -6,11 +6,21 @@ services:
     buildCommand: ""
     startCommand: node server.js
     envVars:
-      - key: AI_PROVIDER
-        value: gemini
-      - key: GEMINI_API_KEY
+      - key: AI_PROVIDER_ORDER
+        value: gemini,openai,anthropic
+      - key: GEMINI_API_KEYS
         sync: false
       - key: GEMINI_MODEL
         value: gemini-3.5-flash
+      - key: OPENAI_API_KEYS
+        sync: false
+      - key: OPENAI_MODEL
+        value: gpt-5.4-mini
+      - key: ANTHROPIC_API_KEYS
+        sync: false
+      - key: ANTHROPIC_MODEL
+        value: claude-haiku-4-5
+      - key: USE_AI_ADAPTIVE_QUESTIONS
+        value: false
       - key: ALLOWED_ORIGIN
         value: https://zivcohen-projects.github.io

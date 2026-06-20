@@ -222,6 +222,7 @@ const state = {
 
 const apiEndpoint = getApiEndpoint();
 const adaptiveEndpoint = getAdaptiveEndpoint();
+const useAiAdaptiveQuestions = window.CONVERSATION_COACH_USE_AI_ADAPTIVE_QUESTIONS === true;
 const adaptiveQuestionIds = new Set(["emotion", "personStyle", "request", "opening", "curiosity", "success"]);
 
 const els = {
@@ -645,9 +646,13 @@ async function requestAdaptiveQuestion() {
 async function adaptQuestionAt(index, options = {}) {
   const baseQuestion = questions[index];
   if (!shouldAdaptQuestion(baseQuestion)) return;
-  if (!adaptiveEndpoint) return;
   if (state.answers[baseQuestion.id]) return;
   if (state.adaptedQuestions[baseQuestion.id] || state.pendingAdaptations[baseQuestion.id]) return;
+
+  if (!useAiAdaptiveQuestions || !adaptiveEndpoint) {
+    applyLocalAdaptation(index);
+    return;
+  }
 
   state.pendingAdaptations[baseQuestion.id] = true;
 
