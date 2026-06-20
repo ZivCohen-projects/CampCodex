@@ -246,6 +246,11 @@ const els = {
   restartButton: document.querySelector("#restartButton"),
   questionCard: document.querySelector("#questionCard"),
   resultPanel: document.querySelector("#resultPanel"),
+  resultIntro: document.querySelector("#resultIntro"),
+  seePlanButton: document.querySelector("#seePlanButton"),
+  planDetails: document.querySelector("#planDetails"),
+  personalizedBadge: document.querySelector("#personalizedBadge"),
+  conversationGuide: document.querySelector("#conversationGuide"),
   briefGrid: document.querySelector("#briefGrid"),
   openingScript: document.querySelector("#openingScript"),
   aiFeedbackContent: document.querySelector("#aiFeedbackContent"),
@@ -265,6 +270,7 @@ function render() {
   els.progressBar.style.width = `${percent}%`;
   els.categoryLabel.textContent = question.category;
   els.promptKicker.textContent = question.kicker;
+  els.personalizedBadge.hidden = !state.adaptedQuestions[question.id];
   els.questionText.textContent = question.question;
   els.questionHelp.textContent = question.help;
   els.backButton.disabled = state.index === 0;
@@ -429,11 +435,14 @@ function renderResult() {
   const plan = buildPlan();
   els.questionCard.hidden = true;
   els.resultPanel.hidden = false;
+  els.resultIntro.hidden = false;
+  els.planDetails.hidden = true;
   els.stepLabel.textContent = "Plan ready";
   els.progressPercent.textContent = "100%";
   els.progressBar.style.width = "100%";
   renderTrail();
   renderScores();
+  renderConversationGuide(plan);
 
   els.briefGrid.innerHTML = "";
   plan.cards.forEach((card) => {
@@ -463,8 +472,42 @@ function buildPlan() {
     a.opening ||
     `I want to talk about ${lowerFirst(a.issue || "something important")}. I care about our relationship, and I want to be direct instead of letting this build up.`;
 
+  const guide = [
+    {
+      title: "Set the container",
+      body: `Use ${venue}. Ask for enough private time, and do not start while either person is rushed or performing for others.`,
+    },
+    {
+      title: "Open cleanly",
+      body: script,
+    },
+    {
+      title: "Name the pattern",
+      body: a.evidence
+        ? `Use your concrete examples: ${a.evidence}`
+        : "Describe one or two observable moments. Keep it factual enough that both people could recognize what happened.",
+    },
+    {
+      title: "Own your part",
+      body: a.yourPart || "Name any delay, vagueness, assumption, or avoidance that belongs to you before making your request.",
+    },
+    {
+      title: "Ask before deciding",
+      body: a.curiosity || "Ask what context you may be missing, then listen long enough to be changed by useful information.",
+    },
+    {
+      title: "Make one request",
+      body: a.request || "Ask for one concrete behavior, boundary, or decision. Make the next step visible.",
+    },
+    {
+      title: "Close with agreement",
+      body: a.success || "Summarize what each person agreed to do, and decide when you will check whether it worked.",
+    },
+  ];
+
   return {
     script,
+    guide,
     cards: [
       {
         title: "Core truth",
@@ -508,6 +551,9 @@ function copyPlan() {
   const text = [
     "Fierce Conversation Plan",
     "",
+    "Step-by-step guide:",
+    ...plan.guide.map((step, index) => `${index + 1}. ${step.title}: ${step.body}`),
+    "",
     `Opening: ${plan.script}`,
     "",
     ...plan.cards.map((card) => `${card.title}: ${card.body}`),
@@ -520,6 +566,21 @@ function copyPlan() {
     setTimeout(() => {
       els.copyButton.textContent = "Copy plan";
     }, 1200);
+  });
+}
+
+function revealPlan() {
+  els.resultIntro.hidden = true;
+  els.planDetails.hidden = false;
+  els.seePlanButton.textContent = "Plan shown";
+}
+
+function renderConversationGuide(plan) {
+  els.conversationGuide.innerHTML = "";
+  plan.guide.forEach((step) => {
+    const li = document.createElement("li");
+    li.innerHTML = `<strong>${escapeHtml(step.title)}</strong>${escapeHtml(step.body)}`;
+    els.conversationGuide.append(li);
   });
 }
 
@@ -777,6 +838,7 @@ els.nextButton.addEventListener("click", next);
 els.backButton.addEventListener("click", back);
 els.restartButton.addEventListener("click", restart);
 els.copyButton.addEventListener("click", copyPlan);
+els.seePlanButton.addEventListener("click", revealPlan);
 els.refineButton.addEventListener("click", () => {
   state.index = Math.max(0, questions.length - 3);
   render();

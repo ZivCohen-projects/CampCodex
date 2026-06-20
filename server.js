@@ -81,7 +81,7 @@ async function handleFeedback(req, res) {
   const prompt = buildCoachPrompt(answers, plan);
   let feedback;
   try {
-    feedback = AI_PROVIDER === "gemini" ? await callGemini(prompt) : await callOpenAi(prompt);
+    feedback = AI_PROVIDER === "gemini" ? await callGemini(prompt, 1600) : await callOpenAi(prompt, 1600);
   } catch (error) {
     sendJson(res, 502, { error: error.message || "AI provider request failed." });
     return;
@@ -200,14 +200,30 @@ You are a direct but caring conversation coach inspired by the principles of fie
 The user is preparing for a difficult conversation. Use their answers below to give real feedback, not generic encouragement.
 
 Your job:
-1. Name the strongest part of their plan.
-2. Name the part they may be avoiding or softening.
-3. Identify any risky assumptions, blame language, vague requests, bad timing, or missing evidence.
-4. Rewrite their opening in a cleaner, more honest voice if needed.
-5. Give 3 practical moves for the conversation.
-6. End with one sentence they should keep in mind right before they start.
+Write a complete, usable conversation plan. Finish every section.
+
+Use these sections exactly:
+
+1. Strongest part
+Name what is already solid in their plan.
+
+2. What they may be avoiding
+Name the likely soft spot, evasion, vague request, risky assumption, or missing boundary.
+
+3. Step-by-step conversation guide
+Give 5 to 7 numbered steps they can follow in the actual conversation. Each step should include what to say or do.
+
+4. Cleaner opening
+Rewrite the opening in a direct, human voice.
+
+5. Watch-outs
+Name the biggest tone, timing, or evidence risks.
+
+6. Final reminder
+End with one sentence they should remember right before starting.
 
 Tone: honest, grounded, concise, compassionate, and useful. Do not over-validate. Do not diagnose anyone. Do not invent facts beyond the answers.
+Do not stop after section 1 or 2. Keep going until the final reminder is complete.
 
 Answers:
 ${formattedAnswers}
