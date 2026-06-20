@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Fierce Conversation Coach</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <canvas id="backgroundScene" aria-hidden="true"></canvas>
+
+    <main class="app-shell">
+      <section class="workspace" aria-label="Conversation coach">
+        <aside class="sidebar" aria-label="Session overview">
+          <div class="brand-lockup">
+            <div class="mark" aria-hidden="true">
+              <span></span>
+              <span></span>
+            </div>
+            <div>
+              <p class="eyebrow">Fierce Conversation Coach</p>
+              <h1>Plan the talk before the stakes plan it for you.</h1>
+            </div>
+          </div>
+
+          <div class="meter" aria-label="Question progress">
+            <div>
+              <span id="stepLabel">Question 1</span>
+              <strong id="progressPercent">0%</strong>
+            </div>
+            <div class="meter-track">
+              <span id="progressBar"></span>
+            </div>
+          </div>
+
+          <div class="compass" aria-label="Conversation compass">
+            <div>
+              <span>Truth</span>
+              <b id="truthScore">0</b>
+            </div>
+            <div>
+              <span>Care</span>
+              <b id="careScore">0</b>
+            </div>
+            <div>
+              <span>Clarity</span>
+              <b id="clarityScore">0</b>
+            </div>
+          </div>
+
+          <ol id="answerTrail" class="answer-trail" aria-label="Completed prompts"></ol>
+        </aside>
+
+        <section class="question-stage" aria-live="polite">
+          <div class="stage-topline">
+            <span id="categoryLabel">The issue</span>
+            <button id="restartButton" class="icon-button" type="button" title="Start over" aria-label="Start over">
+              Reset
+            </button>
+          </div>
+
+          <div id="questionCard" class="question-card">
+            <p id="promptKicker" class="prompt-kicker">Start here</p>
+            <h2 id="questionText"></h2>
+            <p id="questionHelp" class="question-help"></p>
+
+            <div id="optionsPanel" class="options-panel"></div>
+
+            <label id="textPanel" class="text-panel">
+              <span id="textLabel">Your answer</span>
+              <textarea id="textAnswer" rows="6" autocomplete="off"></textarea>
+            </label>
+
+            <div id="scalePanel" class="scale-panel"></div>
+
+            <div id="multiPanel" class="multi-panel"></div>
+
+            <div class="action-row">
+              <button id="backButton" class="secondary-button" type="button">Back</button>
+              <button id="nextButton" class="primary-button" type="button">Next</button>
+            </div>
+          </div>
+
+          <section id="resultPanel" class="result-panel" hidden>
+            <div class="result-header">
+              <p class="prompt-kicker">Conversation brief</p>
+              <h2>Your clear, kind, no-dodging plan</h2>
+            </div>
+            <div id="briefGrid" class="brief-grid"></div>
+            <div class="script-block">
+              <div>
+                <p class="prompt-kicker">Opening script</p>
+                <h3>Start with this</h3>
+              </div>
+              <p id="openingScript"></p>
+            </div>
+            <div class="result-actions">
+              <button id="copyButton" class="secondary-button" type="button">Copy plan</button>
+              <button id="refineButton" class="primary-button" type="button">Refine answers</button>
+            </div>
+          </section>
+        </section>
+      </section>
+    </main>
+
+    <script src="script.js"></script>
+  </body>
+</html>
