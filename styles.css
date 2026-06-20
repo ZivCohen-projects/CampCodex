@@ -404,29 +404,46 @@ textarea:focus {
 }
 
 .brief-card,
-.script-block {
+.script-block,
+.ai-feedback-block {
   padding: 18px;
   border: 1px solid var(--line);
   background: rgba(255, 255, 255, 0.72);
 }
 
 .brief-card h3,
-.script-block h3 {
+.script-block h3,
+.ai-feedback-block h3 {
   margin-bottom: 8px;
   font-size: 1rem;
 }
 
 .brief-card p,
-.script-block p {
+.script-block p,
+.ai-feedback-block p {
   margin-bottom: 0;
   color: var(--muted);
   line-height: 1.5;
 }
 
-.script-block {
+.script-block,
+.ai-feedback-block {
   display: grid;
   grid-template-columns: 180px 1fr;
   gap: 20px;
+}
+
+.ai-feedback-content {
+  display: grid;
+  gap: 14px;
+}
+
+.ai-feedback-content p {
+  white-space: pre-wrap;
+}
+
+.ai-feedback-content.is-error p {
+  color: #9b2f1b;
 }
 
 [hidden] {
@@ -460,7 +477,8 @@ textarea:focus {
   .options-panel,
   .multi-panel,
   .brief-grid,
-  .script-block {
+  .script-block,
+  .ai-feedback-block {
     grid-template-columns: 1fr;
   }
 }

@@ -217,6 +217,8 @@ const state = {
   answers: {},
 };
 
+const apiEndpoint = getApiEndpoint();
+
 const els = {
   stepLabel: document.querySelector("#stepLabel"),
   progressPercent: document.querySelector("#progressPercent"),
@@ -242,6 +244,7 @@ const els = {
   resultPanel: document.querySelector("#resultPanel"),
   briefGrid: document.querySelector("#briefGrid"),
   openingScript: document.querySelector("#openingScript"),
+  aiFeedbackContent: document.querySelector("#aiFeedbackContent"),
   copyButton: document.querySelector("#copyButton"),
   refineButton: document.querySelector("#refineButton"),
 };
@@ -431,6 +434,8 @@ function renderResult() {
     els.briefGrid.append(article);
   });
   els.openingScript.textContent = plan.script;
+  renderAiFeedbackLoading();
+  requestAiFeedback(plan);
 }
 
 function buildPlan() {
@@ -490,12 +495,15 @@ function buildPlan() {
 
 function copyPlan() {
   const plan = buildPlan();
+  const aiNotes = els.aiFeedbackContent?.innerText?.trim();
   const text = [
     "Fierce Conversation Plan",
     "",
     `Opening: ${plan.script}`,
     "",
     ...plan.cards.map((card) => `${card.title}: ${card.body}`),
+    "",
+    aiNotes ? `AI feedback:\n${aiNotes}` : "",
   ].join("\n");
 
   navigator.clipboard?.writeText(text).then(() => {
@@ -504,6 +512,61 @@ function copyPlan() {
       els.copyButton.textContent = "Copy plan";
     }, 1200);
   });
+}
+
+function renderAiFeedbackLoading() {
+  els.aiFeedbackContent.classList.remove("is-error");
+  els.aiFeedbackContent.innerHTML = "<p>Getting real feedback from the coach...</p>";
+}
+
+async function requestAiFeedback(plan) {
+  try {
+    if (!apiEndpoint) {
+      throw new Error(
+        "AI feedback is not configured for this GitHub Pages site. Add your backend URL to config.js.",
+      );
+    }
+
+    const payload = {
+      answers: questions.map((question) => ({
+        id: question.id,
+        category: question.category,
+        question: question.question,
+        answer: state.answers[question.id],
+      })),
+      plan,
+    };
+
+    const response = await fetch(apiEndpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(data.error || "The AI coach could not respond.");
+    }
+
+    renderAiFeedback(data.feedback);
+  } catch (error) {
+    els.aiFeedbackContent.classList.add("is-error");
+    els.aiFeedbackContent.innerHTML = `<p>${escapeHtml(error.message)} The questionnaire still works, but live AI coaching needs a deployed backend with OPENAI_API_KEY set.</p>`;
+  }
+}
+
+function renderAiFeedback(feedback) {
+  const text = String(feedback || "").trim();
+  if (!text) {
+    els.aiFeedbackContent.innerHTML = "<p>The AI coach returned an empty response. Try refining your answers and running it again.</p>";
+    return;
+  }
+
+  els.aiFeedbackContent.classList.remove("is-error");
+  els.aiFeedbackContent.innerHTML = text
+    .split(/\n{2,}/)
+    .map((paragraph) => `<p>${escapeHtml(paragraph.trim())}</p>`)
+    .join("");
 }
 
 function lowerFirst(value) {
@@ -515,6 +578,21 @@ function escapeHtml(value) {
     const map = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" };
     return map[char];
   });
+}
+
+function getApiEndpoint() {
+  const configured = window.CONVERSATION_COACH_API_URL;
+  if (typeof configured === "string" && configured.trim()) {
+    return configured.trim();
+  }
+
+  const isLocal =
+    location.hostname === "localhost" ||
+    location.hostname === "127.0.0.1" ||
+    location.hostname === "";
+
+  if (isLocal) return "/api/feedback";
+  return "";
 }
 
 function drawBackground() {
