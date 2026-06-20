@@ -12,13 +12,11 @@ The frontend uses the AI backend in two places:
 Create `.env`:
 
 ```env
-AI_PROVIDER_ORDER=gemini,openai,anthropic
+AI_PROVIDER_ORDER=gemini,groq
 GEMINI_API_KEYS=your_first_gemini_key_here,your_second_gemini_key_here
 GEMINI_MODEL=gemini-3.5-flash
-OPENAI_API_KEYS=
-OPENAI_MODEL=gpt-5.4-mini
-ANTHROPIC_API_KEYS=
-ANTHROPIC_MODEL=claude-haiku-4-5
+GROQ_API_KEYS=your_first_groq_key_here,your_second_groq_key_here
+GROQ_MODEL=llama-3.3-70b-versatile
 USE_AI_ADAPTIVE_QUESTIONS=false
 ALLOWED_ORIGIN=http://localhost:3000
 ```
@@ -57,19 +55,17 @@ Adaptive questions use local personalization by default to save API calls. Set `
 
 ## Recommended API Keys
 
-Use more than one provider so a quota/rate-limit error does not break the final plan:
+Use both free-key providers so a quota/rate-limit error does not break the final plan:
 
 1. Gemini: create one or more keys at https://aistudio.google.com/apikey and paste them into `GEMINI_API_KEYS`, separated by commas.
-2. OpenAI: optional fallback. Add keys to `OPENAI_API_KEYS`, separated by commas.
-3. Anthropic Claude: optional fallback. Add keys to `ANTHROPIC_API_KEYS`, separated by commas.
+2. Groq: create one or more keys at https://console.groq.com/keys and paste them into `GROQ_API_KEYS`, separated by commas.
 
 Example Render values:
 
 ```env
-AI_PROVIDER_ORDER=gemini,openai,anthropic
+AI_PROVIDER_ORDER=gemini,groq
 GEMINI_API_KEYS=gemini_key_1,gemini_key_2
-OPENAI_API_KEYS=openai_key_1
-ANTHROPIC_API_KEYS=anthropic_key_1
+GROQ_API_KEYS=groq_key_1,groq_key_2
 USE_AI_ADAPTIVE_QUESTIONS=false
 ```
 

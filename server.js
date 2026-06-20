@@ -5,14 +5,12 @@ const path = require("node:path");
 loadEnvFile();
 
 const PORT = Number(process.env.PORT || 3000);
-const OPENAI_API_KEYS = readList(process.env.OPENAI_API_KEYS || process.env.OPENAI_API_KEY);
-const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const GEMINI_API_KEYS = readList(process.env.GEMINI_API_KEYS || process.env.GEMINI_API_KEY);
 const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.5-flash";
-const ANTHROPIC_API_KEYS = readList(process.env.ANTHROPIC_API_KEYS || process.env.ANTHROPIC_API_KEY);
-const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || "claude-haiku-4-5";
+const GROQ_API_KEYS = readList(process.env.GROQ_API_KEYS || process.env.GROQ_API_KEY);
+const GROQ_MODEL = process.env.GROQ_MODEL || "llama-3.3-70b-versatile";
 const AI_PROVIDER_ORDER = readList(
-  process.env.AI_PROVIDER_ORDER || process.env.AI_PROVIDER || "gemini,openai,anthropic",
+  process.env.AI_PROVIDER_ORDER || process.env.AI_PROVIDER || "gemini,groq",
 ).map((provider) => provider.toLowerCase());
 const USE_AI_ADAPTIVE_QUESTIONS = process.env.USE_AI_ADAPTIVE_QUESTIONS === "true";
 const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || "*";
@@ -120,17 +118,14 @@ async function handleAdaptiveQuestion(req, res) {
 async function callAiWithFallback(prompt, maxOutputTokens = 900) {
   const attempts = buildProviderAttempts();
   if (!attempts.length) {
-    throw new Error(
-      "No AI provider keys are configured. Add GEMINI_API_KEYS, OPENAI_API_KEYS, or ANTHROPIC_API_KEYS.",
-    );
+    throw new Error("No AI provider keys are configured. Add GEMINI_API_KEYS or GROQ_API_KEYS.");
   }
 
   const errors = [];
   for (const attempt of attempts) {
     try {
       if (attempt.provider === "gemini") return await callGemini(prompt, maxOutputTokens, attempt.key);
-      if (attempt.provider === "openai") return await callOpenAi(prompt, maxOutputTokens, attempt.key);
-      if (attempt.provider === "anthropic") return await callAnthropic(prompt, maxOutputTokens, attempt.key);
+      if (attempt.provider === "groq") return await callGroq(prompt, maxOutputTokens, attempt.key);
     } catch (error) {
       errors.push(`${attempt.provider}: ${error.message}`);
       if (!shouldTryNextProvider(error)) throw error;
@@ -143,8 +138,7 @@ async function callAiWithFallback(prompt, maxOutputTokens = 900) {
 function buildProviderAttempts() {
   const keyMap = {
     gemini: GEMINI_API_KEYS,
-    openai: OPENAI_API_KEYS,
-    anthropic: ANTHROPIC_API_KEYS,
+    groq: GROQ_API_KEYS,
   };
 
   return AI_PROVIDER_ORDER.flatMap((provider) =>
@@ -158,28 +152,6 @@ function buildProviderAttempts() {
 
 function shouldTryNextProvider(error) {
   return [401, 403, 429, 500, 502, 503, 504].includes(error.status);
-}
-
-async function callOpenAi(prompt, maxOutputTokens = 900, apiKey) {
-  const response = await fetch("https://api.openai.com/v1/responses", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: OPENAI_MODEL,
-      input: prompt,
-      max_output_tokens: maxOutputTokens,
-    }),
-  });
-
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    throw providerError(response.status, data.error?.message || "OpenAI request failed.");
-  }
-
-  return extractOpenAiText(data);
 }
 
 async function callGemini(prompt, maxOutputTokens = 900, apiKey) {
@@ -213,17 +185,16 @@ async function callGemini(prompt, maxOutputTokens = 900, apiKey) {
   return extractGeminiText(data);
 }
 
-async function callAnthropic(prompt, maxOutputTokens = 900, apiKey) {
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
+async function callGroq(prompt, maxOutputTokens = 900, apiKey) {
+  const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
+      Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model: ANTHROPIC_MODEL,
-      max_tokens: maxOutputTokens,
+      model: GROQ_MODEL,
+      max_completion_tokens: maxOutputTokens,
       messages: [
         {
           role: "user",
@@ -235,10 +206,10 @@ async function callAnthropic(prompt, maxOutputTokens = 900, apiKey) {
 
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    throw providerError(response.status, data.error?.message || "Anthropic request failed.");
+    throw providerError(response.status, data.error?.message || "Groq request failed.");
   }
 
-  return extractAnthropicText(data);
+  return extractGroqText(data);
 }
 
 function buildCoachPrompt(answers, plan) {
@@ -341,19 +312,6 @@ Return only valid JSON in this exact shape:
 `.trim();
 }
 
-function extractOpenAiText(data) {
-  if (data.output_text) return data.output_text;
-
-  const chunks = [];
-  for (const item of data.output || []) {
-    for (const content of item.content || []) {
-      if (content.type === "output_text" && content.text) chunks.push(content.text);
-      if (content.type === "text" && content.text) chunks.push(content.text);
-    }
-  }
-  return chunks.join("\n\n").trim();
-}
-
 function extractGeminiText(data) {
   const chunks = [];
   for (const candidate of data.candidates || []) {
@@ -364,12 +322,12 @@ function extractGeminiText(data) {
   return chunks.join("\n\n").trim();
 }
 
-function extractAnthropicText(data) {
-  const chunks = [];
-  for (const item of data.content || []) {
-    if (item.type === "text" && item.text) chunks.push(item.text);
-  }
-  return chunks.join("\n\n").trim();
+function extractGroqText(data) {
+  return (data.choices || [])
+    .map((choice) => choice.message?.content || "")
+    .filter(Boolean)
+    .join("\n\n")
+    .trim();
 }
 
 function providerError(status, message) {
