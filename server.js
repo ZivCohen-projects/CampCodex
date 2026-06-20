@@ -12,7 +12,6 @@ const GROQ_MODEL = process.env.GROQ_MODEL || "llama-3.3-70b-versatile";
 const AI_PROVIDER_ORDER = readList(
   process.env.AI_PROVIDER_ORDER || process.env.AI_PROVIDER || "gemini,groq",
 ).map((provider) => provider.toLowerCase());
-const USE_AI_ADAPTIVE_QUESTIONS = process.env.USE_AI_ADAPTIVE_QUESTIONS === "true";
 const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || "*";
 const PUBLIC_DIR = __dirname;
 
@@ -39,11 +38,6 @@ const server = http.createServer(async (req, res) => {
 
     if (req.method === "POST" && req.url === "/api/feedback") {
       await handleFeedback(req, res);
-      return;
-    }
-
-    if (req.method === "POST" && req.url === "/api/adaptive-question") {
-      await handleAdaptiveQuestion(req, res);
       return;
     }
 
@@ -77,42 +71,6 @@ async function handleFeedback(req, res) {
   }
 
   sendJson(res, 200, { feedback });
-}
-
-async function handleAdaptiveQuestion(req, res) {
-  if (!USE_AI_ADAPTIVE_QUESTIONS) {
-    sendJson(res, 503, {
-      error: "AI adaptive questions are disabled. The frontend will use local personalization.",
-    });
-    return;
-  }
-
-  const body = await readJsonBody(req);
-  const baseQuestion = body.baseQuestion || {};
-  const answers = Array.isArray(body.answers) ? body.answers : [];
-
-  if (!baseQuestion.id || !baseQuestion.type || !baseQuestion.question) {
-    sendJson(res, 400, { error: "Missing base question." });
-    return;
-  }
-
-  const prompt = buildAdaptiveQuestionPrompt(baseQuestion, answers);
-  let raw;
-  try {
-    raw = await callAiWithFallback(prompt, 700);
-  } catch (error) {
-    sendJson(res, 502, { error: error.message || "AI provider request failed." });
-    return;
-  }
-
-  const parsed = parseJsonFromText(raw);
-  const question = normalizeAdaptiveQuestion(baseQuestion, parsed.question || parsed);
-  if (!question) {
-    sendJson(res, 502, { error: "AI returned an invalid adaptive question." });
-    return;
-  }
-
-  sendJson(res, 200, { question });
 }
 
 async function callAiWithFallback(prompt, maxOutputTokens = 900) {
@@ -262,56 +220,6 @@ ${JSON.stringify(plan, null, 2)}
 `.trim();
 }
 
-function buildAdaptiveQuestionPrompt(baseQuestion, answers) {
-  const formattedAnswers = answers
-    .map((item) => {
-      const answer = item.answerDisplay || (Array.isArray(item.answer) ? item.answer.join(", ") : item.answer);
-      return `${item.category} - ${item.question}\nAnswer: ${answer || "(blank)"}`;
-    })
-    .join("\n\n");
-
-  const optionInstructions =
-    baseQuestion.type === "choice" || baseQuestion.type === "multi"
-      ? "Return 4 to 6 options. Each option must have a short label and one sentence detail."
-      : "Do not return options.";
-
-  return `
-You create unusually useful, personalized questions for a difficult-conversation coaching app.
-
-The app is inspired by fierce conversations: direct truth, care for the relationship, accountability, specificity, and curiosity.
-
-Rewrite the next base question so it fits this user's situation. Keep the same input type: ${baseQuestion.type}.
-The rewritten question must be meaningfully different from the base question. Do not return the same wording with tiny edits.
-
-Make the question sharper than generic advice. It should surface something the user might not think to examine, such as hidden stakes, role confusion, self-protection, assumed intent, cost of silence, concrete repair, or a boundary they are avoiding.
-
-Do not diagnose anyone. Do not invent facts. Do not make the wording therapy-ish or corporate.
-
-Base question:
-${JSON.stringify(baseQuestion, null, 2)}
-
-User answers so far:
-${formattedAnswers || "(No answers yet.)"}
-
-${optionInstructions}
-
-Return only valid JSON in this exact shape:
-{
-  "question": {
-    "category": "short category",
-    "kicker": "two to four words",
-    "question": "one clear personalized question",
-    "help": "one helpful sentence",
-    "label": "short label for text answers, if relevant",
-    "placeholder": "short example answer, if relevant",
-    "options": [
-      { "label": "Option label", "detail": "Option detail." }
-    ]
-  }
-}
-`.trim();
-}
-
 function extractGeminiText(data) {
   const chunks = [];
   for (const candidate of data.candidates || []) {
@@ -334,55 +242,6 @@ function providerError(status, message) {
   const error = new Error(message);
   error.status = status;
   return error;
-}
-
-function parseJsonFromText(text) {
-  const raw = String(text || "").trim();
-  try {
-    return JSON.parse(raw);
-  } catch (error) {
-    const match = raw.match(/\{[\s\S]*\}/);
-    if (!match) return {};
-    try {
-      return JSON.parse(match[0]);
-    } catch (innerError) {
-      return {};
-    }
-  }
-}
-
-function normalizeAdaptiveQuestion(baseQuestion, adapted) {
-  if (!adapted || typeof adapted !== "object") return null;
-
-  const question = {
-    category: cleanText(adapted.category) || baseQuestion.category,
-    kicker: cleanText(adapted.kicker) || baseQuestion.kicker,
-    question: cleanText(adapted.question) || baseQuestion.question,
-    help: cleanText(adapted.help) || baseQuestion.help,
-    label: cleanText(adapted.label) || baseQuestion.label,
-    placeholder: cleanText(adapted.placeholder) || baseQuestion.placeholder,
-  };
-
-  if (baseQuestion.type === "choice" || baseQuestion.type === "multi") {
-    const options = Array.isArray(adapted.options)
-      ? adapted.options
-          .map((option) => ({
-            label: cleanText(option.label),
-            detail: cleanText(option.detail),
-          }))
-          .filter((option) => option.label && option.detail)
-          .slice(0, 6)
-      : [];
-
-    if (options.length < 3) return null;
-    question.options = options;
-  }
-
-  return question;
-}
-
-function cleanText(value) {
-  return typeof value === "string" ? value.trim().slice(0, 280) : "";
 }
 
 function serveStatic(req, res) {

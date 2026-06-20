@@ -128,16 +128,6 @@ button {
   flex-wrap: wrap;
 }
 
-.personalized-badge {
-  margin-bottom: 8px;
-  padding: 5px 8px;
-  color: var(--ink);
-  background: rgba(242, 193, 78, 0.38);
-  border: 1px solid rgba(24, 32, 29, 0.16);
-  font-size: 0.72rem;
-  font-weight: 800;
-}
-
 h1,
 h2,
 h3,
@@ -240,6 +230,39 @@ h1 {
 .stage-topline {
   color: var(--muted);
   font-weight: 750;
+}
+
+.depth-selector {
+  width: fit-content;
+  display: inline-grid;
+  grid-template-columns: auto repeat(4, 42px);
+  align-items: center;
+  gap: 6px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.62);
+}
+
+.depth-selector span {
+  padding: 0 8px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.depth-selector button {
+  min-height: 34px;
+  color: var(--ink);
+  background: transparent;
+  cursor: pointer;
+  font-weight: 850;
+}
+
+.depth-selector button:hover,
+.depth-selector button.is-selected {
+  color: white;
+  background: var(--ink);
 }
 
 .icon-button {

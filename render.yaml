@@ -16,7 +16,5 @@ services:
         sync: false
       - key: GROQ_MODEL
         value: llama-3.3-70b-versatile
-      - key: USE_AI_ADAPTIVE_QUESTIONS
-        value: false
       - key: ALLOWED_ORIGIN
         value: https://zivcohen-projects.github.io

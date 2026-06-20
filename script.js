@@ -1,4 +1,4 @@
-const questions = [
+const coreQuestions = [
   {
     id: "issue",
     category: "The issue",
@@ -212,18 +212,498 @@ const questions = [
   },
 ];
 
+const extraQuestions = [
+  {
+    id: "assumption",
+    category: "Your story",
+    kicker: "Check the story",
+    type: "text",
+    question: "What assumption are you making that you have not verified yet?",
+    help: "Separate what you know from what you think it means. This is where many hard conversations go crooked.",
+    label: "The unverified story",
+    placeholder: "Example: I am assuming they do not care about how this affects me.",
+    scores: { truth: 1, care: 1 },
+  },
+  {
+    id: "impact",
+    category: "Impact",
+    kicker: "Name the effect",
+    type: "text",
+    question: "What has this been costing you emotionally, practically, or relationally?",
+    help: "Impact helps the other person understand why the topic matters without turning the talk into an accusation.",
+    label: "The impact",
+    placeholder: "Example: I am spending extra time checking work and I feel less trusting.",
+    scores: { truth: 1, clarity: 2 },
+  },
+  {
+    id: "firstNoticed",
+    category: "The pattern",
+    kicker: "Timeline",
+    type: "text",
+    question: "When did you first notice this becoming something you could not ignore?",
+    help: "A timeline keeps the conversation grounded and helps you avoid sounding like this came out of nowhere.",
+    label: "When it shifted",
+    placeholder: "Example: Around the last project handoff, when the same delay happened three times.",
+    scores: { clarity: 2 },
+  },
+  {
+    id: "frequency",
+    category: "The pattern",
+    kicker: "How often",
+    type: "choice",
+    question: "How often does this issue show up?",
+    help: "Frequency changes the tone. A rare miss needs less force than a repeated pattern.",
+    options: [
+      { label: "Rarely", detail: "Treat it as a repair or clarification." },
+      { label: "Sometimes", detail: "Name the pattern gently and ask what is happening." },
+      { label: "Often", detail: "Be direct about the cost and the needed change." },
+      { label: "Almost constantly", detail: "Prepare a boundary, not just a request." },
+    ],
+    scores: { truth: 1, clarity: 1 },
+  },
+  {
+    id: "powerDynamic",
+    category: "Power",
+    kicker: "Name the dynamic",
+    type: "choice",
+    question: "What power dynamic should you account for?",
+    help: "Power can be formal, emotional, financial, social, or based on who needs what from whom.",
+    options: [
+      { label: "They have more power", detail: "Be concise, documented, and specific." },
+      { label: "I have more power", detail: "Use extra care and invite honesty." },
+      { label: "Power is fairly equal", detail: "Use direct mutual accountability." },
+      { label: "It is complicated", detail: "Name the dynamic carefully before the ask." },
+    ],
+    scores: { care: 1, clarity: 1 },
+  },
+  {
+    id: "trustLevel",
+    category: "Trust",
+    kicker: "Relationship temperature",
+    type: "scale",
+    question: "How much trust is still available between you right now?",
+    help: "If trust is low, your plan needs more evidence, more patience, and less improvising.",
+    labels: ["Thin", "Wobbly", "Mixed", "Solid", "Strong"],
+    scores: { care: 1, clarity: 1 },
+  },
+  {
+    id: "heardBefore",
+    category: "History",
+    kicker: "Have you tried",
+    type: "choice",
+    question: "Have you already raised this before?",
+    help: "A first conversation can be exploratory. A repeated conversation needs clearer consequences or next steps.",
+    options: [
+      { label: "No, this is the first time", detail: "Lead with curiosity and facts." },
+      { label: "Yes, lightly", detail: "Name that you are becoming more direct now." },
+      { label: "Yes, clearly", detail: "Move from request to accountability." },
+      { label: "Many times", detail: "Prepare a boundary and a follow-up date." },
+    ],
+    scores: { truth: 1, clarity: 1 },
+  },
+  {
+    id: "avoidanceReason",
+    category: "Avoidance",
+    kicker: "The hook",
+    type: "choice",
+    question: "What has made you avoid the conversation until now?",
+    help: "Your avoidance reason often predicts where your tone will wobble.",
+    options: [
+      { label: "I do not want to hurt them", detail: "Keep care visible while still being specific." },
+      { label: "I fear their reaction", detail: "Prepare boundaries and do not over-explain." },
+      { label: "I am not sure I am right", detail: "Lead with observations and curiosity." },
+      { label: "I need something from them", detail: "Be honest about the stakes and power dynamic." },
+      { label: "I keep minimizing it", detail: "Name the cost of staying quiet." },
+    ],
+    scores: { truth: 1, care: 1 },
+  },
+  {
+    id: "bodySignal",
+    category: "Your state",
+    kicker: "Body check",
+    type: "choice",
+    question: "What does your body do when you imagine this conversation?",
+    help: "Your nervous system gives useful data about pacing, timing, and preparation.",
+    options: [
+      { label: "Tight chest", detail: "Slow the opening and breathe before naming the issue." },
+      { label: "Hot face", detail: "Wait until the charge drops before you speak." },
+      { label: "Stomach drop", detail: "Plan the ask and the exit before starting." },
+      { label: "Numb or blank", detail: "Write the first sentence down." },
+      { label: "Mostly steady", detail: "You can probably be direct and simple." },
+    ],
+    scores: { care: 1 },
+  },
+  {
+    id: "trigger",
+    category: "Your state",
+    kicker: "Pressure point",
+    type: "text",
+    question: "What could they say that would make you lose your footing?",
+    help: "Planning for your trigger makes it less likely to run the conversation.",
+    label: "The line that would hook you",
+    placeholder: "Example: If they say I am overreacting, I will want to defend everything at once.",
+    scores: { care: 1, clarity: 1 },
+  },
+  {
+    id: "bestCaseForThem",
+    category: "Fairness",
+    kicker: "Steelman",
+    type: "text",
+    question: "What is the most generous believable explanation for their behavior?",
+    help: "This keeps you from entering like a prosecutor. It does not require you to excuse the impact.",
+    label: "Their best reasonable case",
+    placeholder: "Example: They may be overloaded and embarrassed, not careless.",
+    scores: { care: 2 },
+  },
+  {
+    id: "nonNegotiable",
+    category: "Boundary",
+    kicker: "Line in the sand",
+    type: "text",
+    question: "What is the one thing you are no longer willing to keep doing?",
+    help: "A boundary is about your future behavior, not controlling theirs.",
+    label: "Your non-negotiable",
+    placeholder: "Example: I am not willing to absorb last-minute work without a clear escalation.",
+    scores: { truth: 1, clarity: 2 },
+  },
+  {
+    id: "consequence",
+    category: "Boundary",
+    kicker: "If nothing changes",
+    type: "text",
+    question: "If nothing changes after the conversation, what will you do differently?",
+    help: "This is not a threat. It is the reality you need to be honest with yourself about.",
+    label: "Your next move",
+    placeholder: "Example: I will stop accepting undocumented handoffs and escalate earlier.",
+    scores: { truth: 1, clarity: 2 },
+  },
+  {
+    id: "repairNeed",
+    category: "Repair",
+    kicker: "What needs mending",
+    type: "choice",
+    question: "Is repair part of what you need, or is this mostly about logistics?",
+    help: "Repair conversations need more acknowledgment. Logistics conversations need more specificity.",
+    options: [
+      { label: "Mostly repair", detail: "Lead with impact, care, and listening." },
+      { label: "Mostly logistics", detail: "Lead with facts and next steps." },
+      { label: "Both", detail: "Separate the emotional impact from the practical request." },
+      { label: "I am not sure", detail: "Ask what they think needs repair." },
+    ],
+    scores: { care: 1, clarity: 1 },
+  },
+  {
+    id: "apology",
+    category: "Your part",
+    kicker: "Clean ownership",
+    type: "text",
+    question: "Is there anything you should apologize for before making your ask?",
+    help: "A precise apology can lower defensiveness. A vague apology can muddy the issue.",
+    label: "Possible apology",
+    placeholder: "Example: I should apologize for waiting until I was frustrated instead of raising it earlier.",
+    scores: { care: 2, truth: 1 },
+  },
+  {
+    id: "permission",
+    category: "Opening",
+    kicker: "Invitation",
+    type: "text",
+    question: "How will you ask for permission to have the conversation?",
+    help: "Permission does not mean asking whether the truth is allowed. It means setting a better container.",
+    label: "Permission sentence",
+    placeholder: "Example: Do you have twenty minutes today for something important about how we are working together?",
+    scores: { care: 1, clarity: 1 },
+  },
+  {
+    id: "dataMissing",
+    category: "Missing context",
+    kicker: "Unknowns",
+    type: "text",
+    question: "What information might change your interpretation of what happened?",
+    help: "If nothing could change your mind, you may be ready for a boundary rather than a discovery conversation.",
+    label: "What you do not know",
+    placeholder: "Example: I do not know whether priorities changed or whether they had a blocker.",
+    scores: { care: 1, clarity: 1 },
+  },
+  {
+    id: "values",
+    category: "Values",
+    kicker: "What it touches",
+    type: "choice",
+    question: "What value is this issue pressing on for you?",
+    help: "Values explain why a situation feels bigger than the isolated facts.",
+    options: [
+      { label: "Respect", detail: "You need consideration and directness." },
+      { label: "Reliability", detail: "You need commitments to mean something." },
+      { label: "Fairness", detail: "You need the load or standard to be shared." },
+      { label: "Honesty", detail: "You need reality named without spin." },
+      { label: "Safety", detail: "You need boundaries around harm or risk." },
+      { label: "Belonging", detail: "You need the relationship to feel mutual." },
+    ],
+    scores: { truth: 1 },
+  },
+  {
+    id: "audience",
+    category: "Logistics",
+    kicker: "Privacy",
+    type: "choice",
+    question: "Who should definitely not be present for this conversation?",
+    help: "Hard conversations get distorted when they become performances.",
+    options: [
+      { label: "Peers or coworkers", detail: "Keep work status out of the room." },
+      { label: "Family or mutual friends", detail: "Avoid turning it into a group judgment." },
+      { label: "Their boss or authority figure", detail: "Start privately unless escalation is needed." },
+      { label: "No one else", detail: "A private one-on-one is the right container." },
+    ],
+    scores: { care: 1, clarity: 1 },
+  },
+  {
+    id: "timingRisk",
+    category: "Timing",
+    kicker: "Bad moment",
+    type: "text",
+    question: "What timing would make this conversation worse?",
+    help: "Sometimes courage is speaking soon. Sometimes courage is not ambushing someone at the worst possible moment.",
+    label: "Bad timing to avoid",
+    placeholder: "Example: Not right before the client meeting or when either of us is rushing out.",
+    scores: { care: 1, clarity: 1 },
+  },
+  {
+    id: "mediumRisk",
+    category: "Logistics",
+    kicker: "Channel",
+    type: "choice",
+    question: "Which communication channel would make misunderstanding most likely?",
+    help: "Choose the channel that protects clarity, not the channel that protects your comfort.",
+    options: [
+      { label: "Text message", detail: "Too easy to misread tone." },
+      { label: "Email", detail: "Useful for setup, risky for emotional nuance." },
+      { label: "Public chat", detail: "Too performative for a real conversation." },
+      { label: "Live call", detail: "Risky only if either person gets flooded quickly." },
+    ],
+    scores: { clarity: 1 },
+  },
+  {
+    id: "oneSentenceTruth",
+    category: "Core truth",
+    kicker: "Boil it down",
+    type: "text",
+    question: "If you could only say one honest sentence, what would it be?",
+    help: "This sentence is your compass. The actual conversation can be kinder and more complete.",
+    label: "One honest sentence",
+    placeholder: "Example: I need us to stop treating missed handoffs like they are harmless.",
+    scores: { truth: 2, clarity: 1 },
+  },
+  {
+    id: "whatNotToSay",
+    category: "Tone",
+    kicker: "Avoid the cheap shot",
+    type: "text",
+    question: "What sentence would feel satisfying but make the conversation worse?",
+    help: "Naming the tempting sentence helps you avoid using it when you feel cornered.",
+    label: "The sentence to leave out",
+    placeholder: "Example: You always make your problem my problem.",
+    scores: { care: 2 },
+  },
+  {
+    id: "defensiveMove",
+    category: "Their style",
+    kicker: "If they push back",
+    type: "choice",
+    question: "What kind of pushback should your plan be ready for?",
+    help: "A good plan does not require the other person to respond perfectly.",
+    options: [
+      { label: "Denial", detail: "Return to examples and impact." },
+      { label: "Blame shifting", detail: "Own your part, then return to the request." },
+      { label: "Minimizing", detail: "Name the cost without escalating." },
+      { label: "Counterattack", detail: "Slow down and set a respect boundary." },
+      { label: "Withdrawal", detail: "Ask one simple question and allow a pause." },
+    ],
+    scores: { care: 1, clarity: 1 },
+  },
+  {
+    id: "listeningTarget",
+    category: "Listening",
+    kicker: "Listen for",
+    type: "choice",
+    question: "What should you listen for most carefully?",
+    help: "Listening with a target keeps you from only waiting for your turn to talk.",
+    options: [
+      { label: "New facts", detail: "Information that changes the picture." },
+      { label: "Their intent", detail: "What they thought they were doing." },
+      { label: "Their constraints", detail: "What makes the change hard." },
+      { label: "Their willingness", detail: "Whether they are ready to own next steps." },
+      { label: "Their hurt", detail: "Impact you may need to repair." },
+    ],
+    scores: { care: 2 },
+  },
+  {
+    id: "followUpDate",
+    category: "Follow-up",
+    kicker: "Make it real",
+    type: "text",
+    question: "When should you check back on whether the conversation changed anything?",
+    help: "Without follow-up, even a good conversation can evaporate.",
+    label: "Follow-up timing",
+    placeholder: "Example: I will check in next Friday after the next handoff.",
+    scores: { clarity: 2 },
+  },
+  {
+    id: "measure",
+    category: "Success",
+    kicker: "Visible proof",
+    type: "text",
+    question: "What observable behavior would prove progress, even if the emotions are still settling?",
+    help: "Good outcomes are visible enough that both people can recognize them.",
+    label: "Observable proof",
+    placeholder: "Example: The handoff arrives before the meeting with the missing fields filled in.",
+    scores: { clarity: 2 },
+  },
+  {
+    id: "fallbackAsk",
+    category: "The ask",
+    kicker: "If they cannot say yes",
+    type: "text",
+    question: "What smaller first step would still move things in the right direction?",
+    help: "A fallback ask keeps the conversation from becoming yes-or-nothing.",
+    label: "Smaller ask",
+    placeholder: "Example: If weekly notes are too much, can we start with the top three risks by Wednesday?",
+    scores: { clarity: 2, care: 1 },
+  },
+  {
+    id: "supportNeeded",
+    category: "Support",
+    kicker: "Do not go in alone",
+    type: "text",
+    question: "What support or preparation do you need before you have the conversation?",
+    help: "Support might be notes, documentation, a rehearsal, HR guidance, or simply a calmer moment.",
+    label: "Support needed",
+    placeholder: "Example: I need to write the facts down and rehearse the opening once.",
+    scores: { care: 1, clarity: 1 },
+  },
+  {
+    id: "escalationLine",
+    category: "Escalation",
+    kicker: "Know the line",
+    type: "text",
+    question: "At what point would this need to involve someone else?",
+    help: "Escalation is not failure when safety, authority, or repeated harm is involved.",
+    label: "Escalation line",
+    placeholder: "Example: If they agree and miss the next two handoffs, I will bring in our manager.",
+    scores: { clarity: 2 },
+  },
+  {
+    id: "confidentiality",
+    category: "Trust",
+    kicker: "After the talk",
+    type: "choice",
+    question: "How private does this conversation need to stay afterward?",
+    help: "Privacy expectations prevent the second conflict after the first conversation.",
+    options: [
+      { label: "Very private", detail: "Agree on what can and cannot be shared." },
+      { label: "Mostly private", detail: "Share only next steps with relevant people." },
+      { label: "Work-visible outcome", detail: "The agreement may need to be documented." },
+      { label: "Not sure", detail: "Ask directly during the close." },
+    ],
+    scores: { care: 1, clarity: 1 },
+  },
+  {
+    id: "closeSentence",
+    category: "Closing",
+    kicker: "Land the plane",
+    type: "text",
+    question: "What closing sentence would leave the conversation clear rather than hanging?",
+    help: "The ending should summarize agreement, care, and the next step.",
+    label: "Closing sentence",
+    placeholder: "Example: I appreciate you hearing this; I will send the agreed next steps so we both have them.",
+    scores: { care: 1, clarity: 2 },
+  },
+  {
+    id: "selfRespect",
+    category: "Courage",
+    kicker: "Future you",
+    type: "text",
+    question: "What would make you proud of how you handled yourself, regardless of their reaction?",
+    help: "You cannot control their response. You can control whether you were honest, fair, and clear.",
+    label: "Your standard",
+    placeholder: "Example: I stayed calm, told the truth, and did not soften the request into fog.",
+    scores: { truth: 1, care: 1, clarity: 1 },
+  },
+];
+
+const questionBank = [...coreQuestions, ...extraQuestions];
+const questionDepthOptions = [5, 10, 15, 20];
+
+const questionSlots = [
+  ["pattern", "frequency", "firstNoticed", "assumption"],
+  ["stakes", "impact", "values", "selfRespect"],
+  ["desiredOutcome", "request", "nonNegotiable", "fallbackAsk"],
+  ["evidence", "oneSentenceTruth", "dataMissing"],
+  ["yourPart", "apology", "avoidanceReason"],
+  ["emotion", "bodySignal", "trigger"],
+  ["personStyle", "defensiveMove", "listeningTarget"],
+  ["tone", "whatNotToSay", "bestCaseForThem"],
+  ["venue", "permission", "timingRisk", "mediumRisk"],
+  ["opening", "oneSentenceTruth", "permission"],
+  ["curiosity", "dataMissing", "listeningTarget"],
+  ["readiness", "trustLevel", "supportNeeded"],
+  ["powerDynamic", "audience", "confidentiality"],
+  ["repairNeed", "apology", "bestCaseForThem"],
+  ["consequence", "escalationLine", "nonNegotiable"],
+  ["success", "measure", "followUpDate"],
+  ["closeSentence", "followUpDate", "confidentiality"],
+  ["supportNeeded", "selfRespect", "escalationLine"],
+];
+
+let questions = createQuestionSet(10);
+
+function createQuestionSet(count) {
+  const selected = ["issue", "relationship"];
+  const used = new Set(selected);
+
+  questionSlots.forEach((slot) => {
+    if (selected.length >= count) return;
+    const candidate = pickRandom(slot.filter((id) => !used.has(id)));
+    if (!candidate) return;
+    selected.push(candidate);
+    used.add(candidate);
+  });
+
+  if (selected.length < count) {
+    shuffle(questionBank.map((question) => question.id)).forEach((id) => {
+      if (selected.length >= count || used.has(id)) return;
+      selected.push(id);
+      used.add(id);
+    });
+  }
+
+  return selected
+    .slice(0, count)
+    .map((id) => questionBank.find((question) => question.id === id))
+    .filter(Boolean);
+}
+
+function pickRandom(items) {
+  if (!items.length) return "";
+  return items[Math.floor(Math.random() * items.length)];
+}
+
+function shuffle(items) {
+  const shuffled = [...items];
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    [shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]];
+  }
+  return shuffled;
+}
+
 const state = {
   index: 0,
+  selectedCount: 10,
   answers: {},
-  adaptedQuestions: {},
-  adaptationSources: {},
-  pendingAdaptations: {},
 };
 
 const apiEndpoint = getApiEndpoint();
-const adaptiveEndpoint = getAdaptiveEndpoint();
-const useAiAdaptiveQuestions = window.CONVERSATION_COACH_USE_AI_ADAPTIVE_QUESTIONS === true;
-const adaptiveQuestionIds = new Set(["emotion", "personStyle", "request", "opening", "curiosity", "success"]);
 
 const els = {
   stepLabel: document.querySelector("#stepLabel"),
@@ -243,12 +723,12 @@ const els = {
   textAnswer: document.querySelector("#textAnswer"),
   scalePanel: document.querySelector("#scalePanel"),
   multiPanel: document.querySelector("#multiPanel"),
+  depthButtons: document.querySelectorAll("[data-question-count]"),
   backButton: document.querySelector("#backButton"),
   nextButton: document.querySelector("#nextButton"),
   restartButton: document.querySelector("#restartButton"),
   questionCard: document.querySelector("#questionCard"),
   resultPanel: document.querySelector("#resultPanel"),
-  personalizedBadge: document.querySelector("#personalizedBadge"),
   aiFeedbackContent: document.querySelector("#aiFeedbackContent"),
   copyButton: document.querySelector("#copyButton"),
   refineButton: document.querySelector("#refineButton"),
@@ -266,14 +746,12 @@ function render() {
   els.progressBar.style.width = `${percent}%`;
   els.categoryLabel.textContent = question.category;
   els.promptKicker.textContent = question.kicker;
-  els.personalizedBadge.hidden = !state.adaptedQuestions[question.id];
-  els.personalizedBadge.textContent =
-    state.adaptationSources[question.id] === "ai" ? "Personalized by AI" : "Personalized";
   els.questionText.textContent = question.question;
   els.questionHelp.textContent = question.help;
   els.backButton.disabled = state.index === 0;
   els.nextButton.textContent = state.index === questions.length - 1 ? "Build plan" : "Next";
 
+  renderDepthButtons();
   hideInputs();
   renderTrail();
   renderScores();
@@ -284,7 +762,6 @@ function render() {
   if (question.type === "multi") renderMulti(question);
 
   updateNextState();
-  requestAdaptiveQuestion();
 }
 
 function hideInputs() {
@@ -382,19 +859,7 @@ async function next() {
     return;
   }
 
-  const nextIndex = state.index + 1;
-  if (shouldAdaptQuestion(questions[nextIndex])) {
-    const originalText = els.nextButton.textContent;
-    els.nextButton.disabled = true;
-    els.nextButton.textContent = "Personalizing...";
-    await withTimeout(adaptQuestionAt(nextIndex, { rerenderCurrent: true }), 1400);
-    if (!state.adaptedQuestions[questions[nextIndex].id]) {
-      applyLocalAdaptation(nextIndex);
-    }
-    els.nextButton.textContent = originalText;
-  }
-
-  state.index = nextIndex;
+  state.index += 1;
   render();
 }
 
@@ -409,10 +874,25 @@ function back() {
 function restart() {
   state.index = 0;
   state.answers = {};
-  state.adaptedQuestions = {};
-  state.adaptationSources = {};
-  state.pendingAdaptations = {};
+  questions = createQuestionSet(state.selectedCount);
   render();
+}
+
+function setQuestionCount(count) {
+  if (!questionDepthOptions.includes(count) || count === state.selectedCount) return;
+  state.selectedCount = count;
+  state.index = 0;
+  state.answers = {};
+  questions = createQuestionSet(count);
+  render();
+}
+
+function renderDepthButtons() {
+  els.depthButtons.forEach((button) => {
+    const count = Number(button.dataset.questionCount);
+    button.classList.toggle("is-selected", count === state.selectedCount);
+    button.setAttribute("aria-pressed", String(count === state.selectedCount));
+  });
 }
 
 function renderTrail() {
@@ -577,8 +1057,8 @@ async function requestAiFeedback(plan) {
     const payload = {
       answers: questions.map((question) => ({
         id: question.id,
-        category: getQuestionById(question.id).category,
-        question: getQuestionById(question.id).question,
+        category: question.category,
+        question: question.question,
         answer: state.answers[question.id],
         answerDisplay: formatAnswerForAi(question, state.answers[question.id]),
       })),
@@ -630,202 +1110,7 @@ function getCurrentQuestion() {
 }
 
 function getQuestionAt(index) {
-  const baseQuestion = questions[index];
-  return state.adaptedQuestions[baseQuestion.id] || baseQuestion;
-}
-
-function getQuestionById(id) {
-  const index = questions.findIndex((question) => question.id === id);
-  return index === -1 ? questions[0] : getQuestionAt(index);
-}
-
-async function requestAdaptiveQuestion() {
-  await adaptQuestionAt(state.index, { rerenderCurrent: true });
-}
-
-async function adaptQuestionAt(index, options = {}) {
-  const baseQuestion = questions[index];
-  if (!shouldAdaptQuestion(baseQuestion)) return;
-  if (state.answers[baseQuestion.id]) return;
-  if (state.adaptedQuestions[baseQuestion.id] || state.pendingAdaptations[baseQuestion.id]) return;
-
-  if (!useAiAdaptiveQuestions || !adaptiveEndpoint) {
-    applyLocalAdaptation(index);
-    return;
-  }
-
-  state.pendingAdaptations[baseQuestion.id] = true;
-
-  try {
-    const payload = {
-      baseQuestion,
-      answers: questions
-        .slice(0, index)
-        .map((question, index) => {
-          const renderedQuestion = getQuestionAt(index);
-          return {
-            id: renderedQuestion.id,
-            category: renderedQuestion.category,
-            question: renderedQuestion.question,
-            answer: state.answers[renderedQuestion.id],
-            answerDisplay: formatAnswerForAi(renderedQuestion, state.answers[renderedQuestion.id]),
-          };
-        })
-        .filter((item) => item.answer),
-    };
-
-    const response = await fetch(adaptiveEndpoint, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.error || "Question adaptation failed.");
-
-    const adapted = normalizeAdaptedQuestion(baseQuestion, data.question);
-    if (adapted) {
-      state.adaptedQuestions[baseQuestion.id] = adapted;
-      state.adaptationSources[baseQuestion.id] = "ai";
-      if (options.rerenderCurrent && questions[state.index].id === baseQuestion.id && !state.answers[baseQuestion.id]) {
-        render();
-      }
-    }
-  } catch (error) {
-    console.warn(error);
-    applyLocalAdaptation(index);
-  } finally {
-    delete state.pendingAdaptations[baseQuestion.id];
-  }
-}
-
-function shouldAdaptQuestion(question) {
-  return state.index >= 5 && adaptiveQuestionIds.has(question.id) && Object.keys(state.answers).length >= 4;
-}
-
-function normalizeAdaptedQuestion(baseQuestion, adapted) {
-  if (!adapted || typeof adapted !== "object") return null;
-
-  const next = {
-    ...baseQuestion,
-    category: cleanText(adapted.category) || baseQuestion.category,
-    kicker: cleanText(adapted.kicker) || baseQuestion.kicker,
-    question: cleanText(adapted.question) || baseQuestion.question,
-    help: cleanText(adapted.help) || baseQuestion.help,
-    label: cleanText(adapted.label) || baseQuestion.label,
-    placeholder: cleanText(adapted.placeholder) || baseQuestion.placeholder,
-  };
-
-  if ((baseQuestion.type === "choice" || baseQuestion.type === "multi") && Array.isArray(adapted.options)) {
-    const options = adapted.options
-      .map((option) => ({
-        label: cleanText(option.label),
-        detail: cleanText(option.detail),
-      }))
-      .filter((option) => option.label && option.detail)
-      .slice(0, 6);
-
-    if (options.length >= 3) next.options = options;
-  }
-
-  return isMeaningfullyDifferent(baseQuestion, next) ? next : null;
-}
-
-function cleanText(value) {
-  return typeof value === "string" ? value.trim().slice(0, 240) : "";
-}
-
-function isMeaningfullyDifferent(baseQuestion, adaptedQuestion) {
-  const normalize = (value) =>
-    String(value || "")
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, " ")
-      .trim();
-  return normalize(baseQuestion.question) !== normalize(adaptedQuestion.question);
-}
-
-function applyLocalAdaptation(index) {
-  const baseQuestion = questions[index];
-  if (!shouldAdaptQuestion(baseQuestion)) return;
-  if (state.answers[baseQuestion.id] || state.adaptedQuestions[baseQuestion.id]) return;
-
-  const adapted = buildLocalAdaptiveQuestion(baseQuestion);
-  if (!adapted || !isMeaningfullyDifferent(baseQuestion, adapted)) return;
-
-  state.adaptedQuestions[baseQuestion.id] = adapted;
-  state.adaptationSources[baseQuestion.id] = "local";
-  if (questions[state.index].id === baseQuestion.id && !state.answers[baseQuestion.id]) {
-    render();
-  }
-}
-
-function buildLocalAdaptiveQuestion(baseQuestion) {
-  const issue = state.answers.issue || "this issue";
-  const relationship = state.answers.relationship || "this person";
-  const pattern = state.answers.pattern || "this pattern";
-  const stakes = state.answers.stakes || "what is at stake";
-  const evidence = state.answers.evidence || "the examples you named";
-  const yourPart = state.answers.yourPart || "your part";
-
-  const shared = {
-    ...baseQuestion,
-    category: baseQuestion.category,
-  };
-
-  const adaptations = {
-    emotion: {
-      ...shared,
-      kicker: "Under the surface",
-      question: `When you picture telling this ${String(relationship).toLowerCase()} about ${asPhrase(issue)}, what reaction in yourself are you most trying not to show?`,
-      help: "Pick the emotion you would need to manage so the conversation stays honest instead of reactive.",
-    },
-    personStyle: {
-      ...shared,
-      kicker: "Their defenses",
-      question: `Given ${asPhrase(pattern)} and ${asPhrase(evidence)}, what response should you be ready for from this ${String(relationship).toLowerCase()}?`,
-      help: "Choose the behaviors you should plan around without assuming bad intent.",
-    },
-    request: {
-      ...shared,
-      kicker: "The real ask",
-      question: `What exact change would protect ${asPhrase(stakes)} without making this ${String(relationship).toLowerCase()} guess what you need?`,
-      help: "Make the request observable enough that both of you could tell whether it happened.",
-      placeholder: "Example: I need the handoff notes by 3pm on Thursdays, or a heads-up by noon if they will be late.",
-    },
-    opening: {
-      ...shared,
-      kicker: "First sentence",
-      question: `How can you open by naming ${asPhrase(issue)} while also owning ${asPhrase(yourPart)}?`,
-      help: "Start with the truth, then signal that you want a productive conversation rather than a verdict.",
-      placeholder: "Example: I want to talk about the handoff pattern, and I realize I waited too long to bring it up directly.",
-    },
-    curiosity: {
-      ...shared,
-      kicker: "Check your story",
-      question: `Before you decide what this ${String(relationship).toLowerCase()} meant by ${asPhrase(pattern)}, what question would test your assumption?`,
-      help: "Ask something that could actually change your understanding.",
-      placeholder: "Example: What is getting in the way of the handoffs from your side?",
-    },
-    success: {
-      ...shared,
-      kicker: "Proof of change",
-      question: `One week after this conversation, what would prove that ${asPhrase(stakes)} is being protected better?`,
-      help: "Define success as a visible behavior, not just a better feeling.",
-      placeholder: "Example: We have a clear handoff rhythm, and I am not silently checking every deadline myself.",
-    },
-  };
-
-  return adaptations[baseQuestion.id] || null;
-}
-
-function shorten(value) {
-  const text = String(value || "").trim();
-  return text.length > 90 ? `${text.slice(0, 87)}...` : text;
-}
-
-function asPhrase(value) {
-  const text = shorten(value).replace(/[.?!]+$/, "");
-  return text ? text.charAt(0).toLowerCase() + text.slice(1) : "this";
+  return questions[index];
 }
 
 function formatAnswerForAi(question, answer) {
@@ -836,15 +1121,6 @@ function formatAnswerForAi(question, answer) {
     return `${answer}${label ? ` (${label})` : ""} on a 1-5 readiness scale`;
   }
   return String(answer);
-}
-
-function withTimeout(promise, ms) {
-  return Promise.race([
-    promise,
-    new Promise((resolve) => {
-      setTimeout(resolve, ms);
-    }),
-  ]);
 }
 
 function formatFeedbackHtml(text) {
@@ -947,16 +1223,6 @@ function getApiEndpoint() {
   return "";
 }
 
-function getAdaptiveEndpoint() {
-  const configured = window.CONVERSATION_COACH_ADAPTIVE_URL;
-  if (typeof configured === "string" && configured.trim()) {
-    return configured.trim();
-  }
-
-  if (!apiEndpoint) return "";
-  return apiEndpoint.replace(/\/api\/feedback\/?$/, "/api/adaptive-question");
-}
-
 function drawBackground() {
   const canvas = document.querySelector("#backgroundScene");
   const ctx = canvas.getContext("2d");
@@ -1020,6 +1286,9 @@ function roundRect(ctx, x, y, width, height, radius) {
 els.nextButton.addEventListener("click", next);
 els.backButton.addEventListener("click", back);
 els.restartButton.addEventListener("click", restart);
+els.depthButtons.forEach((button) => {
+  button.addEventListener("click", () => setQuestionCount(Number(button.dataset.questionCount)));
+});
 els.copyButton.addEventListener("click", copyPlan);
 els.refineButton.addEventListener("click", () => {
   state.index = Math.max(0, questions.length - 3);
