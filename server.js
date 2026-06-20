@@ -7,6 +7,9 @@ loadEnvFile();
 const PORT = Number(process.env.PORT || 3000);
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.5-flash";
+const AI_PROVIDER = (process.env.AI_PROVIDER || (GEMINI_API_KEY ? "gemini" : "openai")).toLowerCase();
 const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || "*";
 const PUBLIC_DIR = __dirname;
 
@@ -52,7 +55,14 @@ server.listen(PORT, () => {
 });
 
 async function handleFeedback(req, res) {
-  if (!OPENAI_API_KEY) {
+  if (AI_PROVIDER === "gemini" && !GEMINI_API_KEY) {
+    sendJson(res, 500, {
+      error: "Missing GEMINI_API_KEY on the server.",
+    });
+    return;
+  }
+
+  if (AI_PROVIDER === "openai" && !OPENAI_API_KEY) {
     sendJson(res, 500, {
       error: "Missing OPENAI_API_KEY on the server.",
     });
@@ -64,6 +74,18 @@ async function handleFeedback(req, res) {
   const plan = body.plan || {};
 
   const prompt = buildCoachPrompt(answers, plan);
+  let feedback;
+  try {
+    feedback = AI_PROVIDER === "gemini" ? await callGemini(prompt) : await callOpenAi(prompt);
+  } catch (error) {
+    sendJson(res, 502, { error: error.message || "AI provider request failed." });
+    return;
+  }
+
+  sendJson(res, 200, { feedback });
+}
+
+async function callOpenAi(prompt) {
   const response = await fetch("https://api.openai.com/v1/responses", {
     method: "POST",
     headers: {
@@ -79,13 +101,41 @@ async function handleFeedback(req, res) {
 
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    sendJson(res, response.status, {
-      error: data.error?.message || "OpenAI request failed.",
-    });
-    return;
+    throw new Error(data.error?.message || "OpenAI request failed.");
   }
 
-  sendJson(res, 200, { feedback: extractResponseText(data) });
+  return extractOpenAiText(data);
+}
+
+async function callGemini(prompt) {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
+    GEMINI_MODEL,
+  )}:generateContent`;
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-goog-api-key": GEMINI_API_KEY,
+    },
+    body: JSON.stringify({
+      contents: [
+        {
+          parts: [{ text: prompt }],
+        },
+      ],
+      generationConfig: {
+        maxOutputTokens: 900,
+      },
+    }),
+  });
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.error?.message || "Gemini request failed.");
+  }
+
+  return extractGeminiText(data);
 }
 
 function buildCoachPrompt(answers, plan) {
@@ -119,7 +169,7 @@ ${JSON.stringify(plan, null, 2)}
 `.trim();
 }
 
-function extractResponseText(data) {
+function extractOpenAiText(data) {
   if (data.output_text) return data.output_text;
 
   const chunks = [];
@@ -127,6 +177,16 @@ function extractResponseText(data) {
     for (const content of item.content || []) {
       if (content.type === "output_text" && content.text) chunks.push(content.text);
       if (content.type === "text" && content.text) chunks.push(content.text);
+    }
+  }
+  return chunks.join("\n\n").trim();
+}
+
+function extractGeminiText(data) {
+  const chunks = [];
+  for (const candidate of data.candidates || []) {
+    for (const part of candidate.content?.parts || []) {
+      if (part.text) chunks.push(part.text);
     }
   }
   return chunks.join("\n\n").trim();

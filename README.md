@@ -7,8 +7,9 @@ A guided difficult-conversation planner with optional AI coaching feedback.
 Create `.env`:
 
 ```env
-OPENAI_API_KEY=your_key_here
-OPENAI_MODEL=gpt-5.4-mini
+AI_PROVIDER=gemini
+GEMINI_API_KEY=your_key_here
+GEMINI_MODEL=gemini-3.5-flash
 ALLOWED_ORIGIN=http://localhost:3000
 ```
 
@@ -22,7 +23,7 @@ Open `http://localhost:3000`.
 
 ## GitHub Pages
 
-GitHub Pages can host the frontend, but it cannot run `server.js` or hide `OPENAI_API_KEY`.
+GitHub Pages can host the frontend, but it cannot run `server.js` or hide provider API keys.
 
 Current GitHub Pages frontend:
 
@@ -33,7 +34,7 @@ To use AI feedback on GitHub Pages with Render:
 1. Go to https://dashboard.render.com/blueprints.
 2. Click "New Blueprint Instance".
 3. Connect `ZivCohen-projects/CampCodex`.
-4. When Render asks for environment variables, set `OPENAI_API_KEY`.
+4. When Render asks for environment variables, set `GEMINI_API_KEY`.
 5. Deploy the service.
 6. Copy the Render service URL and edit `config.js`:
 

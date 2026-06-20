@@ -6,9 +6,11 @@ services:
     buildCommand: ""
     startCommand: node server.js
     envVars:
-      - key: OPENAI_API_KEY
+      - key: AI_PROVIDER
+        value: gemini
+      - key: GEMINI_API_KEY
         sync: false
-      - key: OPENAI_MODEL
-        value: gpt-5.4-mini
+      - key: GEMINI_MODEL
+        value: gemini-3.5-flash
       - key: ALLOWED_ORIGIN
         value: https://zivcohen-projects.github.io
