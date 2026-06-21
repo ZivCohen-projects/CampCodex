@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Fierce Conversation Coach</title>
-    <link rel="stylesheet" href="styles.css?v=20260620-contextual-1" />
+    <link rel="stylesheet" href="styles.css?v=20260621-account-history-1" />
   </head>
   <body>
     <canvas id="backgroundScene" aria-hidden="true"></canvas>
@@ -48,6 +48,11 @@
             </div>
           </div>
 
+          <div class="account-tools" aria-label="Account and conversation history">
+            <button id="accountButton" class="secondary-button account-tool-button" type="button">Local profile</button>
+            <button id="historyButton" class="secondary-button account-tool-button" type="button">All conversations</button>
+          </div>
+
           <ol id="answerTrail" class="answer-trail" aria-label="Completed prompts"></ol>
         </aside>
 
@@ -58,6 +63,42 @@
               Reset
             </button>
           </div>
+
+          <section id="accountPanel" class="utility-panel" hidden>
+            <p class="prompt-kicker">Local account</p>
+            <h2>Your conversation profile</h2>
+            <p class="utility-copy">
+              Saved on this browser so future AI feedback can use your patterns, preferences, and prior conversation history.
+            </p>
+            <label class="text-panel compact-text-panel">
+              <span>Name</span>
+              <input id="profileNameInput" type="text" autocomplete="name" placeholder="Example: Ziv" />
+            </label>
+            <label class="text-panel compact-text-panel">
+              <span>What should the coach remember about how you tend to show up?</span>
+              <textarea
+                id="profileNotesInput"
+                rows="5"
+                placeholder="Example: I avoid conflict until I am frustrated, then I get too blunt."
+              ></textarea>
+            </label>
+            <div class="action-row">
+              <button id="closeAccountButton" class="secondary-button" type="button">Back</button>
+              <button id="saveAccountButton" class="primary-button" type="button">Save profile</button>
+            </div>
+          </section>
+
+          <section id="historyPanel" class="utility-panel" hidden>
+            <div class="result-header">
+              <div>
+                <p class="prompt-kicker">Conversation history</p>
+                <h2>All conversations</h2>
+              </div>
+              <button id="closeHistoryButton" class="secondary-button" type="button">Back</button>
+            </div>
+            <div id="historyList" class="history-list"></div>
+            <article id="historyDetail" class="history-detail" hidden></article>
+          </section>
 
           <section id="depthPanel" class="depth-panel" aria-labelledby="depthTitle">
             <p class="prompt-kicker">Fierce Conversation Coach</p>
@@ -136,7 +177,7 @@
       </section>
     </main>
 
-    <script src="config.js?v=20260620-contextual-1"></script>
-    <script src="script.js?v=20260620-contextual-1"></script>
+    <script src="config.js?v=20260621-account-history-1"></script>
+    <script src="script.js?v=20260621-account-history-1"></script>
   </body>
 </html>

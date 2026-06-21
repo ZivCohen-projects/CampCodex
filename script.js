@@ -968,10 +968,47 @@ function shuffle(items) {
   return shuffled;
 }
 
+const accountStorageKey = "fierceConversationCoach.localAccount.v1";
+
+function createDefaultAccount() {
+  return {
+    id: `local-${Date.now()}`,
+    name: "Local user",
+    notes: "",
+    conversations: [],
+  };
+}
+
+function loadAccount() {
+  try {
+    const raw = localStorage.getItem(accountStorageKey);
+    if (!raw) return createDefaultAccount();
+    const parsed = JSON.parse(raw);
+    return {
+      ...createDefaultAccount(),
+      ...parsed,
+      conversations: Array.isArray(parsed.conversations) ? parsed.conversations : [],
+    };
+  } catch (error) {
+    return createDefaultAccount();
+  }
+}
+
+function saveAccount(account = state.account) {
+  try {
+    localStorage.setItem(accountStorageKey, JSON.stringify(account));
+  } catch (error) {
+    console.warn("Could not save local account", error);
+  }
+}
+
 const state = {
   index: 0,
   selectedCount: 10,
   hasStarted: false,
+  view: "coach",
+  account: loadAccount(),
+  activeHistoryId: "",
   answers: {},
 };
 
@@ -996,6 +1033,17 @@ const els = {
   scalePanel: document.querySelector("#scalePanel"),
   multiPanel: document.querySelector("#multiPanel"),
   depthPanel: document.querySelector("#depthPanel"),
+  accountPanel: document.querySelector("#accountPanel"),
+  historyPanel: document.querySelector("#historyPanel"),
+  accountButton: document.querySelector("#accountButton"),
+  historyButton: document.querySelector("#historyButton"),
+  profileNameInput: document.querySelector("#profileNameInput"),
+  profileNotesInput: document.querySelector("#profileNotesInput"),
+  saveAccountButton: document.querySelector("#saveAccountButton"),
+  closeAccountButton: document.querySelector("#closeAccountButton"),
+  closeHistoryButton: document.querySelector("#closeHistoryButton"),
+  historyList: document.querySelector("#historyList"),
+  historyDetail: document.querySelector("#historyDetail"),
   depthButtons: document.querySelectorAll("[data-question-count]"),
   backButton: document.querySelector("#backButton"),
   nextButton: document.querySelector("#nextButton"),
@@ -1008,6 +1056,18 @@ const els = {
 };
 
 function render() {
+  updateAccountButtons();
+
+  if (state.view === "account") {
+    renderAccountPanel();
+    return;
+  }
+
+  if (state.view === "history") {
+    renderHistoryPanel();
+    return;
+  }
+
   if (!state.hasStarted) {
     renderDepthScreen();
     return;
@@ -1018,6 +1078,8 @@ function render() {
   const percent = Math.round((completed / questions.length) * 100);
 
   els.depthPanel.hidden = true;
+  els.accountPanel.hidden = true;
+  els.historyPanel.hidden = true;
   els.questionCard.hidden = false;
   els.resultPanel.hidden = true;
   els.restartButton.hidden = false;
@@ -1047,6 +1109,8 @@ function renderDepthScreen() {
   els.depthPanel.hidden = false;
   els.questionCard.hidden = true;
   els.resultPanel.hidden = true;
+  els.accountPanel.hidden = true;
+  els.historyPanel.hidden = true;
   els.restartButton.hidden = true;
   els.stepLabel.textContent = "Choose depth";
   els.progressPercent.textContent = "0%";
@@ -1055,6 +1119,37 @@ function renderDepthScreen() {
   renderDepthButtons();
   renderTrail();
   renderScores();
+}
+
+function renderAccountPanel() {
+  hideCoachPanels();
+  els.accountPanel.hidden = false;
+  els.restartButton.hidden = true;
+  els.categoryLabel.textContent = "Local profile";
+  els.stepLabel.textContent = "Profile";
+  els.progressPercent.textContent = `${state.account.conversations.length}`;
+  els.progressBar.style.width = "0%";
+  els.profileNameInput.value = state.account.name || "";
+  els.profileNotesInput.value = state.account.notes || "";
+}
+
+function renderHistoryPanel() {
+  hideCoachPanels();
+  els.historyPanel.hidden = false;
+  els.restartButton.hidden = true;
+  els.categoryLabel.textContent = "History";
+  els.stepLabel.textContent = "All conversations";
+  els.progressPercent.textContent = `${state.account.conversations.length}`;
+  els.progressBar.style.width = "100%";
+  renderHistoryList();
+}
+
+function hideCoachPanels() {
+  els.depthPanel.hidden = true;
+  els.questionCard.hidden = true;
+  els.resultPanel.hidden = true;
+  els.accountPanel.hidden = true;
+  els.historyPanel.hidden = true;
 }
 
 function hideInputs() {
@@ -1262,6 +1357,7 @@ function restart() {
   state.index = 0;
   state.answers = {};
   state.hasStarted = false;
+  state.view = "coach";
   render();
 }
 
@@ -1281,6 +1377,125 @@ function renderDepthButtons() {
     button.classList.toggle("is-selected", count === state.selectedCount);
     button.setAttribute("aria-pressed", String(count === state.selectedCount));
   });
+}
+
+function showAccount() {
+  state.view = "account";
+  state.activeHistoryId = "";
+  render();
+}
+
+function showHistory() {
+  state.view = "history";
+  state.activeHistoryId = "";
+  render();
+}
+
+function closeUtilityPanel() {
+  state.view = "coach";
+  render();
+}
+
+function saveProfile() {
+  state.account.name = els.profileNameInput.value.trim() || "Local user";
+  state.account.notes = els.profileNotesInput.value.trim();
+  saveAccount();
+  updateAccountButtons();
+  els.saveAccountButton.textContent = "Saved";
+  setTimeout(() => {
+    els.saveAccountButton.textContent = "Save profile";
+  }, 1000);
+}
+
+function updateAccountButtons() {
+  if (!els.accountButton || !state.account) return;
+  els.accountButton.textContent = state.account.name ? `Profile: ${state.account.name}` : "Local profile";
+  els.historyButton.textContent = `All conversations (${state.account.conversations.length})`;
+}
+
+function renderHistoryList() {
+  const conversations = state.account.conversations || [];
+  els.historyList.innerHTML = "";
+  els.historyDetail.hidden = true;
+  els.historyDetail.innerHTML = "";
+
+  if (!conversations.length) {
+    els.historyList.innerHTML = `<div class="history-card"><div><h3>No saved conversations yet</h3><p>Finish a plan with AI feedback and it will appear here.</p></div></div>`;
+    return;
+  }
+
+  conversations.forEach((conversation) => {
+    const card = document.createElement("article");
+    card.className = "history-card";
+    card.innerHTML = `
+      <div>
+        <h3>${escapeHtml(conversation.title)}</h3>
+        <p>${escapeHtml(formatHistoryMeta(conversation))}</p>
+      </div>
+      <div class="history-actions">
+        <button class="secondary-button" type="button" data-history-view="${conversation.id}">View</button>
+        <button class="secondary-button" type="button" data-history-delete="${conversation.id}">Delete</button>
+      </div>
+    `;
+    els.historyList.append(card);
+  });
+}
+
+function viewConversation(id) {
+  const conversation = state.account.conversations.find((item) => item.id === id);
+  if (!conversation) return;
+  state.activeHistoryId = id;
+  els.historyDetail.hidden = false;
+  els.historyDetail.innerHTML = `
+    <div>
+      <p class="prompt-kicker">${escapeHtml(formatHistoryMeta(conversation))}</p>
+      <h3>${escapeHtml(conversation.title)}</h3>
+    </div>
+    <div class="ai-feedback-content">${formatFeedbackHtml(conversation.feedback)}</div>
+  `;
+  els.historyDetail.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+function deleteConversation(id) {
+  const conversation = state.account.conversations.find((item) => item.id === id);
+  if (!conversation) return;
+  const confirmed = confirm(`Delete "${conversation.title}"?`);
+  if (!confirmed) return;
+  state.account.conversations = state.account.conversations.filter((item) => item.id !== id);
+  if (state.activeHistoryId === id) state.activeHistoryId = "";
+  saveAccount();
+  updateAccountButtons();
+  renderHistoryList();
+}
+
+function saveConversationRecord(plan, answers, feedback) {
+  const conversation = {
+    id: `conversation-${Date.now()}`,
+    createdAt: new Date().toISOString(),
+    title: buildConversationTitle(),
+    questionCount: questions.length,
+    answers,
+    plan,
+    feedback,
+  };
+
+  state.account.conversations = [conversation, ...(state.account.conversations || [])].slice(0, 50);
+  saveAccount();
+  updateAccountButtons();
+}
+
+function buildConversationTitle() {
+  const relationship = state.answers.relationship || "Conversation";
+  const purpose = state.answers.conversationType || "prep";
+  const issue = String(state.answers.issue || "").trim();
+  const shortIssue = issue.length > 54 ? `${issue.slice(0, 51)}...` : issue;
+  return shortIssue ? `${relationship} - ${purpose}: ${shortIssue}` : `${relationship} - ${purpose}`;
+}
+
+function formatHistoryMeta(conversation) {
+  const date = new Date(conversation.createdAt);
+  const dateText = Number.isNaN(date.getTime()) ? "Saved conversation" : date.toLocaleDateString();
+  return `${dateText} - ${conversation.questionCount || 0} questions`;
 }
 
 function renderTrail() {
@@ -1451,6 +1666,7 @@ async function requestAiFeedback(plan) {
         answerDisplay: formatAnswerForAi(question, state.answers[question.id]),
       })),
       plan,
+      profileContext: buildProfileContext(),
     };
 
     const response = await fetch(apiEndpoint, {
@@ -1465,10 +1681,27 @@ async function requestAiFeedback(plan) {
     }
 
     renderAiFeedback(data.feedback);
+    saveConversationRecord(plan, payload.answers, data.feedback);
   } catch (error) {
     els.aiFeedbackContent.classList.add("is-error");
     els.aiFeedbackContent.innerHTML = `<p>${escapeHtml(error.message)} The questionnaire still works, but live AI coaching needs a deployed backend with a provider API key set.</p>`;
   }
+}
+
+function buildProfileContext() {
+  const recentConversations = (state.account.conversations || []).slice(0, 5).map((conversation) => ({
+    title: conversation.title,
+    date: conversation.createdAt,
+    questionCount: conversation.questionCount,
+    feedbackExcerpt: String(conversation.feedback || "").slice(0, 700),
+  }));
+
+  return {
+    profileName: state.account.name || "Local user",
+    behaviorNotes: state.account.notes || "",
+    totalSavedConversations: state.account.conversations.length,
+    recentConversations,
+  };
 }
 
 function renderAiFeedback(feedback) {
@@ -1674,6 +1907,17 @@ function roundRect(ctx, x, y, width, height, radius) {
 els.nextButton.addEventListener("click", next);
 els.backButton.addEventListener("click", back);
 els.restartButton.addEventListener("click", restart);
+els.accountButton.addEventListener("click", showAccount);
+els.historyButton.addEventListener("click", showHistory);
+els.saveAccountButton.addEventListener("click", saveProfile);
+els.closeAccountButton.addEventListener("click", closeUtilityPanel);
+els.closeHistoryButton.addEventListener("click", closeUtilityPanel);
+els.historyList.addEventListener("click", (event) => {
+  const viewButton = event.target.closest("[data-history-view]");
+  const deleteButton = event.target.closest("[data-history-delete]");
+  if (viewButton) viewConversation(viewButton.dataset.historyView);
+  if (deleteButton) deleteConversation(deleteButton.dataset.historyDelete);
+});
 els.depthButtons.forEach((button) => {
   button.addEventListener("click", () => startQuestionnaire(Number(button.dataset.questionCount)));
 });

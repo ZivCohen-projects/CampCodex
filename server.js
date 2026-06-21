@@ -60,11 +60,12 @@ async function handleFeedback(req, res) {
   const body = await readJsonBody(req);
   const answers = Array.isArray(body.answers) ? body.answers : [];
   const plan = body.plan || {};
+  const profileContext = body.profileContext || {};
 
-  const prompt = buildCoachPrompt(answers, plan);
+  const prompt = buildCoachPrompt(answers, plan, profileContext);
   let feedback;
   try {
-    feedback = await callAiWithFallback(prompt, 2600);
+    feedback = await callAiWithFallback(prompt, 4200);
   } catch (error) {
     sendJson(res, 502, { error: error.message || "AI provider request failed." });
     return;
@@ -170,18 +171,20 @@ async function callGroq(prompt, maxOutputTokens = 900, apiKey) {
   return extractGroqText(data);
 }
 
-function buildCoachPrompt(answers, plan) {
+function buildCoachPrompt(answers, plan, profileContext = {}) {
   const formattedAnswers = answers
     .map((item) => {
       const answer = item.answerDisplay || (Array.isArray(item.answer) ? item.answer.join(", ") : item.answer);
       return `${item.category} - ${item.question}\nAnswer: ${answer || "(blank)"}`;
     })
     .join("\n\n");
+  const profileSummary = formatProfileContext(profileContext);
 
   return `
 You are a direct but caring conversation coach inspired by the principles of fierce conversations: be truthful, specific, accountable, and relationship-aware.
 
 The user is preparing for a difficult conversation. Use their answers below to give real feedback, not generic encouragement.
+If profile history is available, use it lightly to notice recurring patterns in how the user prepares, avoids, asks, or handles conflict. Do not overfit to history or assume it perfectly applies.
 
 Your job:
 Write a complete, usable conversation plan. Finish every section.
@@ -209,8 +212,12 @@ End with one sentence they should remember right before starting.
 Tone: honest, grounded, concise, compassionate, and useful. Do not over-validate. Do not diagnose anyone. Do not invent facts beyond the answers.
 Do not stop after section 1 or 2. Keep going until the final reminder is complete.
 Write enough substance that the user could follow the plan without guessing what to do next.
+Prioritize completing all six sections over excessive detail in any single section.
 Do not use Markdown heading markers like #, ##, or ###. Use plain section titles.
 The readiness answer is on a 1-5 scale only. Never call it a score out of 10.
+
+Profile history:
+${profileSummary}
 
 Answers:
 ${formattedAnswers}
@@ -218,6 +225,32 @@ ${formattedAnswers}
 Draft plan:
 ${JSON.stringify(plan, null, 2)}
 `.trim();
+}
+
+function formatProfileContext(profileContext) {
+  const recent = Array.isArray(profileContext.recentConversations)
+    ? profileContext.recentConversations.slice(0, 5)
+    : [];
+
+  const parts = [
+    `Profile name: ${profileContext.profileName || "Local user"}`,
+    `Behavior notes: ${profileContext.behaviorNotes || "(none)"}`,
+    `Total saved conversations: ${profileContext.totalSavedConversations || 0}`,
+  ];
+
+  if (recent.length) {
+    parts.push(
+      `Recent conversations:\n${recent
+        .map((conversation, index) => {
+          return `${index + 1}. ${conversation.title || "Untitled"}\nPrior feedback excerpt: ${
+            conversation.feedbackExcerpt || "(none)"
+          }`;
+        })
+        .join("\n\n")}`,
+    );
+  }
+
+  return parts.join("\n");
 }
 
 function extractGeminiText(data) {
