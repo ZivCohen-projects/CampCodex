@@ -396,6 +396,38 @@ h1 {
   line-height: 1.35;
 }
 
+.other-input-panel {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid var(--tan-border);
+  border-radius: 8px;
+  background: rgba(255, 248, 236, 0.76);
+}
+
+.other-input-panel span {
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 800;
+}
+
+.other-input-panel input {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  outline: none;
+  background: rgba(255, 255, 255, 0.84);
+}
+
+.other-input-panel input:focus {
+  border-color: var(--teal-dark);
+  box-shadow: 0 0 0 4px rgba(42, 157, 143, 0.14);
+}
+
 .text-panel {
   display: grid;
   gap: 10px;

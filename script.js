@@ -28,6 +28,23 @@ const coreQuestions = [
     scores: { clarity: 1 },
   },
   {
+    id: "conversationType",
+    category: "The purpose",
+    kicker: "What for",
+    type: "choice",
+    question: "What kind of conversation is this mostly about?",
+    help: "This steers the rest of the questions so the prep fits the situation instead of treating every hard talk the same.",
+    options: [
+      { label: "Work change", detail: "Team, role, manager, workload, schedule, or responsibilities." },
+      { label: "Performance or accountability", detail: "A standard, behavior, missed commitment, or follow-through issue." },
+      { label: "Emotional hurt", detail: "Something affected trust, closeness, respect, or belonging." },
+      { label: "Relationship repair", detail: "You want to mend damage or reconnect after distance or conflict." },
+      { label: "Boundary", detail: "You need to define what you will or will not keep doing." },
+      { label: "Decision or alignment", detail: "You need a choice, agreement, or shared direction." },
+    ],
+    scores: { truth: 1, clarity: 1 },
+  },
+  {
     id: "pattern",
     category: "The pattern",
     kicker: "Separate event from trend",
@@ -608,6 +625,166 @@ const extraQuestions = [
     scores: { care: 1, clarity: 1 },
   },
   {
+    id: "workChangeType",
+    category: "Work change",
+    kicker: "Name the move",
+    type: "choice",
+    question: "What work change are you really asking for?",
+    help: "A career conversation needs a clear ask, not just a description of dissatisfaction.",
+    options: [
+      { label: "Change teams", detail: "You want to move to a different group or manager." },
+      { label: "Change role scope", detail: "You want different responsibilities or a different lane." },
+      { label: "Change workload", detail: "You need capacity, priority, or staffing to change." },
+      { label: "Change growth path", detail: "You want clearer advancement, mentorship, or opportunity." },
+      { label: "Change working style", detail: "You need a different collaboration or communication rhythm." },
+    ],
+    scores: { truth: 1, clarity: 2 },
+  },
+  {
+    id: "managerConcern",
+    category: "Work change",
+    kicker: "Their lens",
+    type: "choice",
+    question: "What will your boss probably care about most?",
+    help: "Plan for the business concern before you make the personal case.",
+    options: [
+      { label: "Coverage", detail: "Who handles the work if your request is approved." },
+      { label: "Timing", detail: "Whether this creates disruption right now." },
+      { label: "Performance", detail: "Whether the request is tied to results or readiness." },
+      { label: "Retention", detail: "Whether this is about keeping you engaged." },
+      { label: "Precedent", detail: "Whether saying yes creates an expectation for others." },
+    ],
+    scores: { care: 1, clarity: 2 },
+  },
+  {
+    id: "careerRisk",
+    category: "Work change",
+    kicker: "Career stakes",
+    type: "choice",
+    question: "What risk do you most need to manage in this work conversation?",
+    help: "This helps you choose how direct, documented, and strategic to be.",
+    options: [
+      { label: "Sounding checked out", detail: "Make your commitment and future usefulness clear." },
+      { label: "Surprising them", detail: "Give context before the ask." },
+      { label: "Being too vague", detail: "Name the specific change you want." },
+      { label: "Creating defensiveness", detail: "Avoid making the current team or boss the villain." },
+      { label: "Moving too slowly", detail: "Ask for a concrete timeline." },
+    ],
+    scores: { care: 1, clarity: 1 },
+  },
+  {
+    id: "emotionalNeed",
+    category: "Emotional truth",
+    kicker: "What you need",
+    type: "choice",
+    question: "What emotional need is underneath the conversation?",
+    help: "With friends, partners, or family, the request often sits on top of a deeper need.",
+    options: [
+      { label: "To feel respected", detail: "You need your perspective treated as real." },
+      { label: "To feel considered", detail: "You need your needs included earlier." },
+      { label: "To feel safe", detail: "You need less volatility, pressure, or uncertainty." },
+      { label: "To feel close again", detail: "You want repair, not just a rule change." },
+      { label: "To feel trusted", detail: "You need less suspicion or control." },
+    ],
+    scores: { truth: 1, care: 2 },
+  },
+  {
+    id: "friendshipGoal",
+    category: "Relationship",
+    kicker: "Relational aim",
+    type: "choice",
+    question: "What do you want to be true between you afterward?",
+    help: "This keeps the conversation aimed at the relationship, not just the complaint.",
+    options: [
+      { label: "More honesty", detail: "You want things named sooner and cleaner." },
+      { label: "More closeness", detail: "You want connection repaired or deepened." },
+      { label: "More reliability", detail: "You want trust rebuilt through follow-through." },
+      { label: "More space", detail: "You need less pressure or more room." },
+      { label: "More mutual effort", detail: "You need the relationship to feel less one-sided." },
+    ],
+    scores: { care: 2, clarity: 1 },
+  },
+  {
+    id: "emotionalRisk",
+    category: "Emotional truth",
+    kicker: "Soft spot",
+    type: "choice",
+    question: "What emotional risk makes this conversation hard?",
+    help: "Naming the risk helps you avoid either attacking or disappearing.",
+    options: [
+      { label: "They may feel rejected", detail: "Lead with care before the boundary." },
+      { label: "I may feel dismissed", detail: "Prepare to restate the impact calmly." },
+      { label: "It may change the relationship", detail: "Be honest about the stakes." },
+      { label: "Old history may come up", detail: "Keep the scope clear." },
+      { label: "I may over-soften", detail: "Write the truth in one sentence first." },
+    ],
+    scores: { truth: 1, care: 1 },
+  },
+  {
+    id: "boundaryType",
+    category: "Boundary",
+    kicker: "Boundary shape",
+    type: "choice",
+    question: "What kind of boundary are you setting?",
+    help: "Different boundaries need different wording and consequences.",
+    options: [
+      { label: "Time", detail: "When you are available or how long something can take." },
+      { label: "Emotional labor", detail: "What you can keep absorbing or processing." },
+      { label: "Communication", detail: "How you are willing to be spoken to or contacted." },
+      { label: "Workload", detail: "What you can realistically own." },
+      { label: "Access", detail: "What you will share, allow, or participate in." },
+    ],
+    scores: { truth: 1, clarity: 2 },
+  },
+  {
+    id: "decisionNeeded",
+    category: "Decision",
+    kicker: "The fork",
+    type: "choice",
+    question: "What kind of decision needs to come out of this?",
+    help: "A decision conversation should not end with everyone vaguely feeling better.",
+    options: [
+      { label: "Yes or no", detail: "You need a clear answer." },
+      { label: "Choose between options", detail: "You need comparison and tradeoffs." },
+      { label: "Set priorities", detail: "You need ranking, not more tasks." },
+      { label: "Define ownership", detail: "You need who does what by when." },
+      { label: "Agree on a test", detail: "You need a trial period or experiment." },
+    ],
+    scores: { clarity: 2 },
+  },
+  {
+    id: "accountabilityAsk",
+    category: "Accountability",
+    kicker: "Ownership",
+    type: "choice",
+    question: "What kind of accountability are you asking for?",
+    help: "This keeps the ask concrete without turning the conversation into punishment.",
+    options: [
+      { label: "Acknowledge impact", detail: "You need them to understand what happened." },
+      { label: "Change a behavior", detail: "You need a visible pattern to shift." },
+      { label: "Repair damage", detail: "You need an action that rebuilds trust." },
+      { label: "Follow through", detail: "You need a commitment kept consistently." },
+      { label: "Make a plan", detail: "You need next steps and ownership." },
+    ],
+    scores: { truth: 1, clarity: 2 },
+  },
+  {
+    id: "conversationEnergy",
+    category: "Tone",
+    kicker: "Energy level",
+    type: "choice",
+    question: "What energy should the conversation have?",
+    help: "Choose the posture that fits this person and this purpose.",
+    options: [
+      { label: "Strategic and calm", detail: "Best for bosses, clients, and high-stakes work." },
+      { label: "Warm and vulnerable", detail: "Best for emotional repair with trusted people." },
+      { label: "Clear and boundaried", detail: "Best when a line has been crossed." },
+      { label: "Curious and exploratory", detail: "Best when you may be missing key context." },
+      { label: "Brief and decisive", detail: "Best when the issue has already been discussed." },
+    ],
+    scores: { care: 1, clarity: 1 },
+  },
+  {
     id: "closeSentence",
     category: "Closing",
     kicker: "Land the plane",
@@ -655,13 +832,70 @@ const questionSlots = [
   ["supportNeeded", "selfRespect", "escalationLine"],
 ];
 
+const requiredQuestionIds = ["issue", "relationship", "conversationType"];
+
+const contextualQuestionSlots = {
+  work: [
+    ["workChangeType"],
+    ["managerConcern", "powerDynamic", "careerRisk"],
+    ["request", "fallbackAsk", "supportNeeded"],
+    ["venue", "timingRisk", "permission"],
+    ["conversationEnergy", "tone", "whatNotToSay"],
+    ["success", "measure", "followUpDate"],
+  ],
+  emotional: [
+    ["emotionalNeed"],
+    ["friendshipGoal", "repairNeed", "desiredOutcome"],
+    ["emotionalRisk", "trigger", "bodySignal"],
+    ["bestCaseForThem", "curiosity", "listeningTarget"],
+    ["opening", "whatNotToSay", "apology"],
+    ["success", "closeSentence", "selfRespect"],
+  ],
+  boundary: [
+    ["boundaryType", "nonNegotiable", "consequence"],
+    ["emotionalRisk", "avoidanceReason", "trigger"],
+    ["request", "fallbackAsk", "accountabilityAsk"],
+    ["tone", "conversationEnergy", "venue"],
+    ["escalationLine", "confidentiality", "followUpDate"],
+  ],
+  repair: [
+    ["repairNeed", "friendshipGoal", "emotionalNeed"],
+    ["apology", "yourPart", "bestCaseForThem"],
+    ["impact", "values", "assumption"],
+    ["curiosity", "listeningTarget", "dataMissing"],
+    ["closeSentence", "success", "followUpDate"],
+  ],
+  decision: [
+    ["decisionNeeded", "desiredOutcome", "workChangeType"],
+    ["stakes", "values", "impact"],
+    ["dataMissing", "curiosity", "bestCaseForThem"],
+    ["request", "fallbackAsk", "measure"],
+    ["followUpDate", "closeSentence", "success"],
+  ],
+  accountability: [
+    ["accountabilityAsk", "pattern", "frequency"],
+    ["evidence", "impact", "oneSentenceTruth"],
+    ["personStyle", "defensiveMove", "conversationEnergy"],
+    ["request", "consequence", "followUpDate"],
+    ["success", "measure", "escalationLine"],
+  ],
+};
+
 let questions = createQuestionSet(10);
 
-function createQuestionSet(count) {
-  const selected = ["issue", "relationship"];
-  const used = new Set(selected);
+function createQuestionSet(count, lockedIds = [], answers = {}) {
+  const selected = [];
+  const used = new Set();
 
-  questionSlots.forEach((slot) => {
+  [...lockedIds, ...requiredQuestionIds].forEach((id) => {
+    if (selected.length >= count || used.has(id)) return;
+    selected.push(id);
+    used.add(id);
+  });
+
+  const slots = getQuestionSlots(answers);
+
+  slots.forEach((slot) => {
     if (selected.length >= count) return;
     const candidate = pickRandom(slot.filter((id) => !used.has(id)));
     if (!candidate) return;
@@ -681,6 +915,43 @@ function createQuestionSet(count) {
     .slice(0, count)
     .map((id) => questionBank.find((question) => question.id === id))
     .filter(Boolean);
+}
+
+function getQuestionSlots(answers = {}) {
+  const relationship = normalizeForMatching(answers.relationship);
+  const purpose = normalizeForMatching(answers.conversationType);
+  const issue = normalizeForMatching(answers.issue);
+  const prioritySlots = [];
+
+  const isWork =
+    includesAny(relationship, ["boss", "coworker", "direct report", "client", "customer"]) ||
+    includesAny(purpose, ["work", "performance", "accountability"]) ||
+    includesAny(issue, ["team", "role", "manager", "boss", "promotion", "workload", "project", "client"]);
+
+  if (isWork) prioritySlots.push(...contextualQuestionSlots.work);
+  if (includesAny(purpose, ["performance", "accountability"])) prioritySlots.push(...contextualQuestionSlots.accountability);
+  if (includesAny(purpose, ["emotional", "hurt"]) || includesAny(relationship, ["friend", "partner", "family"])) {
+    prioritySlots.push(...contextualQuestionSlots.emotional);
+  }
+  if (includesAny(purpose, ["repair"])) prioritySlots.push(...contextualQuestionSlots.repair);
+  if (includesAny(purpose, ["boundary"])) prioritySlots.push(...contextualQuestionSlots.boundary);
+  if (includesAny(purpose, ["decision", "alignment"])) prioritySlots.push(...contextualQuestionSlots.decision);
+
+  return [...prioritySlots, ...questionSlots];
+}
+
+function refreshQuestionSetFromContext() {
+  const lockedIds = questions.slice(0, state.index + 1).map((question) => question.id);
+  questions = createQuestionSet(state.selectedCount, lockedIds, state.answers);
+}
+
+function normalizeForMatching(value) {
+  if (Array.isArray(value)) return value.join(" ").toLowerCase();
+  return String(value || "").toLowerCase();
+}
+
+function includesAny(value, terms) {
+  return terms.some((term) => value.includes(term));
 }
 
 function pickRandom(items) {
@@ -798,18 +1069,41 @@ function hideInputs() {
 
 function renderChoices(question) {
   els.optionsPanel.hidden = false;
+  const selectedAnswer = state.answers[question.id];
+  const optionLabels = question.options.map((option) => option.label);
   question.options.forEach((option) => {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "option-button";
     button.innerHTML = `<strong>${option.label}</strong><span>${option.detail}</span>`;
-    button.classList.toggle("is-selected", state.answers[question.id] === option.label);
+    button.classList.toggle("is-selected", selectedAnswer === option.label);
     button.addEventListener("click", () => {
       state.answers[question.id] = option.label;
       render();
     });
     els.optionsPanel.append(button);
   });
+
+  const otherSelected = isOtherAnswer(selectedAnswer) || (selectedAnswer && !optionLabels.includes(selectedAnswer));
+  const otherButton = document.createElement("button");
+  otherButton.type = "button";
+  otherButton.className = "option-button other-choice-button";
+  otherButton.innerHTML = "<strong>Other</strong><span>Type an answer that fits your situation.</span>";
+  otherButton.classList.toggle("is-selected", Boolean(otherSelected));
+  otherButton.addEventListener("click", () => {
+    state.answers[question.id] = otherSelected ? "" : "Other";
+    render();
+  });
+  els.optionsPanel.append(otherButton);
+
+  if (otherSelected) {
+    els.optionsPanel.append(createOtherInput(question, selectedAnswer, (value) => {
+      state.answers[question.id] = value ? `Other: ${value}` : "Other";
+      updateNextState();
+      renderScores();
+      renderTrail();
+    }));
+  }
 }
 
 function renderText(question) {
@@ -840,6 +1134,7 @@ function renderScale(question) {
 function renderMulti(question) {
   els.multiPanel.hidden = false;
   const selected = state.answers[question.id] || [];
+  const optionLabels = question.options.map((option) => option.label);
   question.options.forEach((option) => {
     const button = document.createElement("button");
     button.type = "button";
@@ -855,12 +1150,77 @@ function renderMulti(question) {
     });
     els.multiPanel.append(button);
   });
+
+  const otherValue = selected.find((answer) => isOtherAnswer(answer) || !optionLabels.includes(answer));
+  const otherButton = document.createElement("button");
+  otherButton.type = "button";
+  otherButton.className = "multi-button other-choice-button";
+  otherButton.innerHTML = "<strong>Other</strong><span>Add something not listed here.</span>";
+  otherButton.classList.toggle("is-selected", Boolean(otherValue));
+  otherButton.addEventListener("click", () => {
+    const next = new Set(state.answers[question.id] || []);
+    if (otherValue) {
+      [...next].forEach((answer) => {
+        if (isOtherAnswer(answer) || !optionLabels.includes(answer)) next.delete(answer);
+      });
+    } else {
+      next.add("Other");
+    }
+    state.answers[question.id] = [...next];
+    render();
+  });
+  els.multiPanel.append(otherButton);
+
+  if (otherValue) {
+    els.multiPanel.append(createOtherInput(question, otherValue, (value) => {
+      const next = new Set(state.answers[question.id] || []);
+      [...next].forEach((answer) => {
+        if (isOtherAnswer(answer) || !optionLabels.includes(answer)) next.delete(answer);
+      });
+      if (value) next.add(`Other: ${value}`);
+      else next.add("Other");
+      state.answers[question.id] = [...next];
+      updateNextState();
+      renderScores();
+      renderTrail();
+    }));
+  }
+}
+
+function createOtherInput(question, answer, onInput) {
+  const label = document.createElement("label");
+  label.className = "other-input-panel";
+  label.innerHTML = "<span>Your answer</span>";
+
+  const input = document.createElement("input");
+  input.type = "text";
+  input.value = getOtherText(answer);
+  input.placeholder = `Type another ${question.category.toLowerCase()} answer`;
+  input.addEventListener("input", () => onInput(input.value.trim()));
+
+  label.append(input);
+  setTimeout(() => input.focus(), 0);
+  return label;
+}
+
+function isOtherAnswer(answer) {
+  return typeof answer === "string" && (answer === "Other" || answer.startsWith("Other:"));
+}
+
+function getOtherText(answer) {
+  if (Array.isArray(answer)) {
+    return getOtherText(answer.find((item) => isOtherAnswer(item)) || "");
+  }
+  if (typeof answer !== "string") return "";
+  return answer.startsWith("Other:") ? answer.replace(/^Other:\s*/, "") : "";
 }
 
 function updateNextState() {
   const question = getCurrentQuestion();
   const answer = state.answers[question.id];
-  const hasAnswer = Array.isArray(answer) ? answer.length > 0 : Boolean(String(answer || "").trim());
+  const hasAnswer = Array.isArray(answer)
+    ? answer.some((item) => !isOtherAnswer(item) || Boolean(getOtherText(item)))
+    : Boolean(String(answer || "").trim()) && (!isOtherAnswer(answer) || Boolean(getOtherText(answer)));
   els.nextButton.disabled = !hasAnswer;
 }
 
@@ -875,6 +1235,11 @@ async function next() {
   commitTextAnswer();
   updateNextState();
   if (els.nextButton.disabled) return;
+
+  const currentQuestion = getCurrentQuestion();
+  if (requiredQuestionIds.includes(currentQuestion.id)) {
+    refreshQuestionSetFromContext();
+  }
 
   if (state.index === questions.length - 1) {
     renderResult();
